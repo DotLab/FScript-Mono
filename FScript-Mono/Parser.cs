@@ -6,7 +6,7 @@ namespace FScriptMono {
 		public const int Add = 1, Sub = 2, Mul = 3, Div = 4;
 		public const int Pos = 11, Neg = 12;
 		public const int Prog = 20, Blck = 21, NoOp = 22;
-		public const int Asgn = 30, Var = 31;
+		public const int Asgn = 30, Var = 31, Decl = 32;
 
 		public int type;
 		public float num;
@@ -71,10 +71,19 @@ namespace FScriptMono {
 			return new Node{ type = Node.Asgn, left = left, right = right };
 		}
 
+		static Node Decl() {
+			Lexer.Expect(Token.Var);
+			var left = Var(Lexer.Expect(Token.Id).id);
+			Lexer.Expect(Token.Equal);
+			var right = Expr();
+			return new Node{ type = Node.Decl, left = left, right = right };
+		}
+
 		public static Node Stmt() {
 			var token = Lexer.Peek();
 			if (token.type == Token.LCurly) return Block();
 			if (token.type == Token.Id) return Asgn();
+			if (token.type == Token.Var) return Decl();
 			return new Node{ type = Node.NoOp };
 
 		}

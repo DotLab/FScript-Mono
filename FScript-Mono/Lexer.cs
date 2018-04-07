@@ -11,6 +11,8 @@ namespace FScriptMono {
 		public const int Equal = 20, Semi = 21;
 		public const int Id = 30;
 
+		public const int Var = 100;
+
 		public int type;
 		public float num;
 		public string id;
@@ -27,6 +29,8 @@ namespace FScriptMono {
 			while (position < text.Length && char.IsLetterOrDigit(text[position])) sb.Append(text[position++]);
 			string id = sb.ToString();
 			switch (id) {
+				case "var":
+					return new Token{ type = Token.Var };
 				default:
 					return new Token{ type = Token.Id, id = id };
 			}

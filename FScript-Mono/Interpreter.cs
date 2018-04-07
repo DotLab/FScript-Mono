@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Text;
-using Env = System.Collections.Generic.Dictionary<string, float>;
+using Env = System.Collections.Generic.Dictionary<string, FScriptMono.Value>;
 
 namespace FScriptMono {
+	public class Value {
+		public float numberValue;
+	}
+
 	/*
 	 public const int Prog = 20, Blck = 21, NoOp = 22;
 	 public const int Asgn = 30, Var = 31, Expr = 32;
@@ -22,7 +26,7 @@ namespace FScriptMono {
 					return node.num;
 				case Node.Var:
 					if (!env.ContainsKey(node.id)) throw new Exception("Never defined " + node.id);
-					return env[node.id];
+					return env[node.id].numberValue;
 
 				case Node.Add:
 					return Eval(node.left, env) + Eval(node.right, env);
@@ -52,7 +56,11 @@ namespace FScriptMono {
 					return 0;
 
 				case Node.Asgn:
-					return env[node.left.id] = Eval(node.right, env);
+					if (!env.ContainsKey(node.left.id)) throw new Exception("Never defined " + node.id);
+					return env[node.left.id].numberValue = Eval(node.right, env);
+				case Node.Decl:
+					env[node.left.id] = new Value{ numberValue = Eval(node.right, env) };
+					return env[node.left.id].numberValue;
 
 				default:
 					throw new Exception("Code pass not possible");
@@ -102,6 +110,8 @@ namespace FScriptMono {
 				
 				case Node.Asgn:
 					return string.Format("{0} = {1}", Print(node.left), Print(node.right));
+				case Node.Decl:
+					return string.Format("var {0} = {1}", Print(node.left), Print(node.right));
 
 				default:
 					throw new Exception("Code pass not possible " + node.type);
