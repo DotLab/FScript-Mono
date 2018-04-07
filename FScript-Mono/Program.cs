@@ -9,10 +9,14 @@ namespace FScriptMono {
 				Console.Write("fscript> ");
 				Lexer.text = Console.ReadLine();
 				Lexer.position = 0;
-				var node = Parser.Expr();
-		
-				Console.WriteLine(Interpreter.Print(node));
-				Console.WriteLine(Interpreter.Eval(node));
+				try {
+					var node = Lexer.Peek().type == Token.LCurly ? Parser.Prog() : Parser.Expr();
+					
+					Console.WriteLine(Interpreter.Print(node));
+					//				Console.WriteLine(Interpreter.Eval(node));
+				} catch (Exception e) {
+					Console.WriteLine(e);
+				}
 			}
 		}
 	}

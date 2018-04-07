@@ -81,7 +81,10 @@ namespace FScriptMono {
 					return new Token { type = Token.RCurly };
 				case '=':
 					position += 1;
-					return new Token { type = Token.Plus };
+					return new Token { type = Token.Equal };
+				case ';':
+					position += 1;
+					return new Token { type = Token.Semi };
 			}
 
 			throw new Exception("Cannot parse");
@@ -105,6 +108,22 @@ namespace FScriptMono {
 			return token;
 		}
 
+		public static Token Expect(int type1, int type2, int type3, int type4, int type5) {
+			var token = Eat();
+			if (token.type != type1 && token.type != type2 && token.type != type3 && token.type != type4 && token.type != type5) throw new Exception("Token type mismatch");
+			return token;
+		}
+
+		public static Token Prefer(int type) {
+			int pos = position;
+			var token = Eat();
+			if (token.type != type) {
+				position = pos;
+				return new Token{ type = Token.Mis };
+			}
+			return token;
+		}
+
 		public static Token Prefer(int type1, int type2) {
 			int pos = position;
 			var token = Eat();
@@ -112,6 +131,13 @@ namespace FScriptMono {
 				position = pos;
 				return new Token{ type = Token.Mis };
 			}
+			return token;
+		}
+
+		public static Token Peek() {
+			int pos = position;
+			var token = Eat();
+			position = pos;
 			return token;
 		}
 	}
