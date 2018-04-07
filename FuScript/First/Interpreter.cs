@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Text;
-using Env = System.Collections.Generic.Dictionary<string, FuScript.Value>;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.First.Value>;
 
-namespace FuScript {
+namespace FuScript.First {
 	public class Value {
 		public float numberValue;
 	}

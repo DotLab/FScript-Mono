@@ -35,9 +35,13 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="First\Interpreter.cs" />
+    <Compile Include="First\Lexer.cs" />
+    <Compile Include="First\Parser.cs" />
     <Compile Include="Lexer.cs" />
-    <Compile Include="Parser.cs" />
-    <Compile Include="Interpreter.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
+  <ItemGroup>
+    <Folder Include="First\" />
+  </ItemGroup>
 </Project>

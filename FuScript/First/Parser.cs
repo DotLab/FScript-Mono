@@ -1,6 +1,6 @@
 ﻿using System.Collections.Generic;
 
-namespace FuScript {
+namespace FuScript.First {
 	public sealed class Node {
 		public const int Num = 0;
 		public const int Add = 1, Sub = 2, Mul = 3, Div = 4;
