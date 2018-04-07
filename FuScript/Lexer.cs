@@ -72,7 +72,7 @@ namespace FuScript {
 			case Token.OrOr:        return "||";
 			case Token.Id:          return stringLiteral;
 			case Token.String:      return "'" + stringLiteral + "'";
-			case Token.Number:      return numberLiteral.ToString("N1");
+			case Token.Number:      return numberLiteral.ToString();
 			case Token.KClass:      return "CLASS";
 			case Token.KElse:       return "ELSE";
 			case Token.KFalse:      return "FALSE";

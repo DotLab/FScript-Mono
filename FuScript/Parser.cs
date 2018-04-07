@@ -81,7 +81,7 @@ namespace FuScript {
 				switch (token) {
 				case Token.Id:          return stringLiteral;
 				case Token.String:      return "'" + stringLiteral + "'";
-				case Token.Number:      return numberLiteral.ToString("N1");
+				case Token.Number:      return numberLiteral.ToString();
 				case Token.KFalse:      return "false";
 				case Token.KTrue:       return "true";
 				case Token.KNull:       return "null";

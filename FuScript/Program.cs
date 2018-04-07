@@ -20,7 +20,7 @@ namespace FuScript {
 					Console.WriteLine("> " + Lexer.ToString(tokens));
 					Parser.Set(tokens);
 					var root = Parser.Expression();
-					Console.WriteLine(root);
+					Console.Write(root + " = " + Interpreter.Eval(root));
 					Console.WriteLine();
 				} catch (Exception e) {
 					Console.WriteLine(e);
