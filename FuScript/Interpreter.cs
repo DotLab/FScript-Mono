@@ -74,8 +74,8 @@ namespace FuScript {
 		public static Value Eval(Node node) {
 			switch (node.type) {
 			case Node.BinaryOp:
-				var left = Eval(node.node1);
-				var right = Eval(node.node2);
+				var left = Eval(node.child1);
+				var right = Eval(node.child2);
 
 				switch (node.token) {
 				case Token.Minus:       return new Value(left.GetFloat() - right.GetFloat());
@@ -101,7 +101,7 @@ namespace FuScript {
 					throw new System.Exception("Code path not possible");
 				}
 			case Node.UnaryOp:
-				var one = Eval(node.node1);
+				var one = Eval(node.child1);
 
 				switch (node.token) {
 				case Token.Minus:       return new Value(-one.GetFloat());
@@ -120,6 +120,16 @@ namespace FuScript {
 				default:
 					throw new System.Exception("Code path not possible");
 				}
+			case Node.Statement:
+				switch (node.token) {
+				case Token.KPrint:      Console.WriteLine(Eval(node.child1)); return new Value();
+				default:
+					throw new System.Exception("Code path not possible");
+				}
+			case Node.Program:
+				int length = node.children.Length;
+				for (int i = 0; i < length; i++) Eval(node.children[i]);
+				return new Value();
 			default:
 				throw new System.Exception("Code path not possible");
 			}

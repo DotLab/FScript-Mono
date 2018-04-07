@@ -1,11 +1,13 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace FuScript {
 	public sealed class Node {
-		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2;
+		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2, Statement = 3, Program = 4;
 
 		public readonly byte type, token;
-		public readonly Node node1, node2, node3;
+		public readonly Node child1, child2, child3;
+		public readonly Node[] children;
 
 		public readonly bool boolLiteral;
 		public readonly float numberLiteral;
@@ -16,17 +18,23 @@ namespace FuScript {
 			this.token = token;
 		}
 
+		public Node(byte type, byte token, Node[] children) {
+			this.type = type;
+			this.token = token;
+			this.children = children;
+		}
+
 		public Node(byte type, byte token, Node node1) {
 			this.type = type;
 			this.token = token;
-			this.node1 = node1;
+			this.child1 = node1;
 		}
 
 		public Node(byte type, byte token, Node node1, Node node2) {
 			this.type = type;
 			this.token = token;
-			this.node1 = node1;
-			this.node2 = node2;
+			this.child1 = node1;
+			this.child2 = node2;
 		}
 
 		public Node(byte type, byte token, bool boolLiteral) {
@@ -47,33 +55,40 @@ namespace FuScript {
 			this.stringLiteral = stringLiteral;
 		}
 
+		public Node(byte type, byte token, string stringLiteral, Node child1) {
+			this.type = type;
+			this.token = token;
+			this.stringLiteral = stringLiteral;
+			this.child1 = child1;
+		}
+
 		public override string ToString() {
 			switch (type) {
 			case Node.BinaryOp:
 				switch (token) {
-				case Token.Minus:       return "(" + node1 + " - "  + node2 + ")";
-				case Token.Plus:        return "(" + node1 + " + "  + node2 + ")";
-				case Token.Slash:       return "(" + node1 + " / "  + node2 + ")";
-				case Token.Star:        return "(" + node1 + " * "  + node2 + ")";
-				case Token.BangEqual:   return "(" + node1 + " != " + node2 + ")";
-				case Token.EqualEqual:  return "(" + node1 + " == " + node2 + ")";
-				case Token.LAngle:      return "(" + node1 + " < "  + node2 + ")";
-				case Token.LAngleEqual: return "(" + node1 + " <= " + node2 + ")";
-				case Token.LAngleAngle: return "(" + node1 + " << " + node2 + ")";
-				case Token.RAngle:      return "(" + node1 + " > "  + node2 + ")";
-				case Token.RAngleEqual: return "(" + node1 + " >= " + node2 + ")";
-				case Token.RAngleAngle: return "(" + node1 + " >> " + node2 + ")";
-				case Token.And:         return "(" + node1 + " & "  + node2 + ")";
-				case Token.AndAnd:      return "(" + node1 + " && " + node2 + ")";
-				case Token.Or:          return "(" + node1 + " | "  + node2 + ")";
-				case Token.OrOr:        return "(" + node1 + " || " + node2 + ")";
+				case Token.Minus:       return "(" + child1 + " - "  + child2 + ")";
+				case Token.Plus:        return "(" + child1 + " + "  + child2 + ")";
+				case Token.Slash:       return "(" + child1 + " / "  + child2 + ")";
+				case Token.Star:        return "(" + child1 + " * "  + child2 + ")";
+				case Token.BangEqual:   return "(" + child1 + " != " + child2 + ")";
+				case Token.EqualEqual:  return "(" + child1 + " == " + child2 + ")";
+				case Token.LAngle:      return "(" + child1 + " < "  + child2 + ")";
+				case Token.LAngleEqual: return "(" + child1 + " <= " + child2 + ")";
+				case Token.LAngleAngle: return "(" + child1 + " << " + child2 + ")";
+				case Token.RAngle:      return "(" + child1 + " > "  + child2 + ")";
+				case Token.RAngleEqual: return "(" + child1 + " >= " + child2 + ")";
+				case Token.RAngleAngle: return "(" + child1 + " >> " + child2 + ")";
+				case Token.And:         return "(" + child1 + " & "  + child2 + ")";
+				case Token.AndAnd:      return "(" + child1 + " && " + child2 + ")";
+				case Token.Or:          return "(" + child1 + " | "  + child2 + ")";
+				case Token.OrOr:        return "(" + child1 + " || " + child2 + ")";
 				default:
 					throw new System.Exception("Code path not possible");
 				}
 			case Node.UnaryOp:
 				switch (token) {
-				case Token.Minus:       return "-" + node1;
-				case Token.Bang:        return "!" + node2;
+				case Token.Minus:       return "-" + child1;
+				case Token.Bang:        return "!" + child2;
 				default:
 					throw new System.Exception("Code path not possible");
 				}
@@ -88,6 +103,17 @@ namespace FuScript {
 				default:
 					throw new System.Exception("Code path not possible");
 				}
+			case Node.Statement:
+				switch (token) {
+				case Token.KPrint:      return "print " + child1 + ";";
+				default:
+					throw new System.Exception("Code path not possible");
+				}
+			case Node.Program:
+				int length = children.Length;
+				string s = "";
+				for (int i = 0; i < length; i++) s += children[i];
+				return s;
 			default:
 				throw new System.Exception("Code path not possible");
 			}
@@ -97,6 +123,8 @@ namespace FuScript {
 	public static class Parser {
 		static Token[] _tokens;
 		static int _pos, _length;
+
+		static List<Node> _list = new List<Node>();
 
 		public static void Set(Token[] tokens) {
 			_tokens = tokens;
@@ -129,15 +157,72 @@ namespace FuScript {
 			return false;
 		}
 
-		static void Eat(byte type) {
-			if (_tokens[_pos].type == type) _pos += 1;
+		static Token Eat(byte type) {
+			if (_tokens[_pos].type == type) return _tokens[_pos++];
 			throw new Exception("Unexpected token " + _tokens[_pos] + ", expecting " + new Token(type));
+		}
+			
+		/**
+		 * program -> (declaration ";")* EOF
+		 */
+		public static Node Program() {
+			_list.Clear();
+			while (!Match(Token.Eof)) {
+				_list.Add(Declaration());
+				Eat(Token.Semi);
+			}
+			return MkProgram(Token.Eof, _list.ToArray());
+		}
+
+		/**
+		 * declaration -> valDecl
+		 *              | statement
+		 */
+		static Node Declaration() {
+			if (Peek(Token.KVar)) return VarDecl();
+			return Statement();
+		}
+
+		/**
+		 * varDecl -> "var" IDENTIFIER ("=" expression)?
+		 */
+		static Node VarDecl() {
+			var token = Eat(Token.KVar);
+			string id = Eat(Token.Id).stringLiteral;
+			if (Match(Token.Equal)) {
+				return MkDeclaration(token.type, id, Expression());
+			}
+			return MkDeclaration(token.type, id);
+		}
+
+		/**
+		 * statement -> exprStmt
+		 *            | printStmt
+		 */
+		public static Node Statement() {
+			if (Peek(Token.KPrint)) return PrintStmt();
+			return ExprStmt();
+		}
+
+		/**
+		 * exprStmt -> expression
+		 */
+		static Node ExprStmt() {
+			return Expression();
+		}
+
+		/**
+		 * printStmt -> "print" expression
+		 */
+		static Node PrintStmt() {
+			var token = Eat(Token.KPrint);
+			return MkStatement(token.type, Expression());
 		}
 
 		/**
 		 * expression -> equlity
 		 */
-		public static Node Expression() {
+		static Node Expression() {
 			return Equality();
 		}
 
@@ -147,7 +232,7 @@ namespace FuScript {
 		static Node Equality() {
 			var expr = Comparision();
 			while (Peek(Token.BangEqual, Token.EqualEqual)) 
-				expr = BinaryOp(expr, _tokens[_pos++].type, Comparision());
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Comparision());
 			return expr;
 		}
 
@@ -157,7 +242,7 @@ namespace FuScript {
 		static Node Comparision() {
 			var expr = Bitwise();
 			while (Peek(Token.LAngle, Token.LAngleEqual, Token.RAngle, Token.RAngleEqual)) 
-				expr = BinaryOp(expr, _tokens[_pos++].type, Bitwise());
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Bitwise());
 			return expr;
 		}
 		
@@ -167,7 +252,7 @@ namespace FuScript {
 		static Node Bitwise() {
 			var expr = Addition();
 			while (Peek(Token.RAngleAngle, Token.LAngleAngle, Token.And, Token.Or)) 
-				expr = BinaryOp(expr, _tokens[_pos++].type, Addition());
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Addition());
 			return expr;
 		}
 
@@ -177,7 +262,7 @@ namespace FuScript {
 		static Node Addition() {
 			var expr = Multiplication();
 			while (Peek(Token.Minus, Token.Plus)) 
-				expr = BinaryOp(expr, _tokens[_pos++].type, Multiplication());
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Multiplication());
 			return expr;
 		}
 
@@ -187,7 +272,7 @@ namespace FuScript {
 		static Node Multiplication() {
 			var expr = Unary();
 			while (Peek(Token.Slash, Token.Star)) 
-				expr = BinaryOp(expr, _tokens[_pos++].type, Unary());
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Unary());
 			return expr;
 		}
 
@@ -197,7 +282,7 @@ namespace FuScript {
 		 */
 		static Node Unary() {
 			if (Peek(Token.Bang, Token.Minus)) 
-				return UnaryOp(_tokens[_pos++].type, Unary());
+				return MkUnaryOp(_tokens[_pos++].type, Unary());
 			return Primary();
 		}
 
@@ -206,11 +291,11 @@ namespace FuScript {
 		 *          | "(" expression ")"
 		 */
 		static Node Primary() {
-			if (Peek(Token.Number)) return Literal(Token.Number, _tokens[_pos++].numberLiteral);
-			if (Peek(Token.String)) return Literal(Token.String, _tokens[_pos++].stringLiteral);
+			if (Peek(Token.Number)) return MkLiteral(Token.Number, _tokens[_pos++].numberLiteral);
+			if (Peek(Token.String)) return MkLiteral(Token.String, _tokens[_pos++].stringLiteral);
 
-			if (Peek(Token.KFalse, Token.KTrue)) return Literal(_tokens[_pos++].type);
-			if (Match(Token.KNull)) return Literal(Token.KNull);
+			if (Peek(Token.KFalse, Token.KTrue)) return MkLiteral(_tokens[_pos++].type);
+			if (Match(Token.KNull)) return MkLiteral(Token.KNull);
 
 			Eat(Token.LParen);
 			var expr = Expression();
@@ -218,24 +303,40 @@ namespace FuScript {
 			return expr;
 		}
 
-		static Node BinaryOp(Node left, byte token, Node right) {
+		static Node MkBinaryOp(Node left, byte token, Node right) {
 			return new Node(Node.BinaryOp, token, left, right);
 		}
 
-		static Node UnaryOp(byte token, Node one) {
+		static Node MkUnaryOp(byte token, Node one) {
 			return new Node(Node.UnaryOp, token, one);
 		}
 
-		static Node Literal(byte token) {
+		static Node MkLiteral(byte token) {
 			return new Node(Node.Literal, token);
 		}
 
-		static Node Literal(byte token, float numberLiteral) {
+		static Node MkLiteral(byte token, float numberLiteral) {
 			return new Node(Node.Literal, token, numberLiteral);
 		}
 
-		static Node Literal(byte token, string stringLiteral) {
+		static Node MkLiteral(byte token, string stringLiteral) {
 			return new Node(Node.Literal, token, stringLiteral);
+		}
+
+		static Node MkStatement(byte token, Node expr) {
+			return new Node(Node.Statement, token, expr);
+		}
+
+		static Node MkProgram(byte token, Node[] children) {
+			return new Node(Node.Program, token, children);
+		}
+
+		static Node MkDeclaration(byte token, string id) {
+			return new Node(Node.Program, token, id);
+		}
+
+		static Node MkDeclaration(byte token, string id, Node expr) {
+			return new Node(Node.Program, token, id, expr);
 		}
 	}
 }
