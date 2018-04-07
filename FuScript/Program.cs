@@ -8,7 +8,12 @@ namespace FuScript {
 			while (true) {
 				Console.Write("FuScript> ");
 				string text = Console.ReadLine();
-				var tokens = Lexer.Scan(text);
+				try {
+					var tokens = Lexer.Scan(text);
+					Console.WriteLine("> " + Lexer.Print(tokens));
+				} catch (Exception e) {
+					Console.WriteLine(e);
+				}
 			}
 		}
 	}
