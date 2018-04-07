@@ -4,12 +4,19 @@ using System.IO;
 
 namespace FuScript {
 	class MainClass {
+		static readonly StringBuilder _sb = new StringBuilder();
+		static string _line;
+
 		public static void Main(string[] args) {
 			while (true) {
-				Console.Write("FuScript> ");
-				string text = Console.ReadLine();
+				_sb.Clear();
+				do {
+					Console.Write("FuScript> ");
+					_sb.AppendLine(_line = Console.ReadLine());
+				} while (_line != "");
+
 				try {
-					var tokens = Lexer.Scan(text);
+					var tokens = Lexer.Scan(_sb.ToString());
 					Console.WriteLine("> " + Lexer.Print(tokens));
 				} catch (Exception e) {
 					Console.WriteLine(e);

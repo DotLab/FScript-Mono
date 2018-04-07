@@ -26,9 +26,23 @@ namespace FuScript {
 		// EOF
 		public const byte Eof = 255;
 
-		public int type;
-		public string stringLiteral;
-		public float numberLiteral;
+		public readonly int type;
+		public readonly string stringLiteral;
+		public readonly float numberLiteral;
+
+		public Token(int type) {
+			this.type = type;
+		}
+
+		public Token(int type, string stringLiteral) {
+			this.type = type;
+			this.stringLiteral = stringLiteral;
+		}
+
+		public Token(int type, float numberLiteral) {
+			this.type = type;
+			this.numberLiteral = numberLiteral;
+		}
 	}
 
 	public static class Lexer {
@@ -59,14 +73,14 @@ namespace FuScript {
 		}
 
 		static void Add(int type) {
-			_list.Add(new Token{type = type});
+			_list.Add(new Token(type));
 		}
 
 		static void Add(int type, string stringLiteral) {
-			_list.Add(new Token{type = type, stringLiteral = stringLiteral});
+			_list.Add(new Token(type, stringLiteral));
 		}
 		static void Add(int type, float numberLiteral) {
-			_list.Add(new Token{type = type, numberLiteral = numberLiteral});
+			_list.Add(new Token(type, numberLiteral));
 		}
 
 		static bool Match(char c) {
