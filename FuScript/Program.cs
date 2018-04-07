@@ -17,7 +17,11 @@ namespace FuScript {
 
 				try {
 					var tokens = Lexer.Scan(_sb.ToString());
-					Console.WriteLine("> " + Lexer.Print(tokens));
+					Console.WriteLine("> " + Lexer.ToString(tokens));
+					Parser.Set(tokens);
+					var root = Parser.Expression();
+					Console.WriteLine(root);
+					Console.WriteLine();
 				} catch (Exception e) {
 					Console.WriteLine(e);
 				}
