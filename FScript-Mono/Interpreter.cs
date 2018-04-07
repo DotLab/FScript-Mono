@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Text;
+using Env = System.Collections.Generic.Dictionary<string, float>;
 
 namespace FScriptMono {
 	/*
@@ -7,24 +8,51 @@ namespace FScriptMono {
 	 public const int Asgn = 30, Var = 31, Expr = 32;
 	*/
 	public static class Interpreter {
-		public static float Eval(Node node) {
+		public static Env NewEnv() {
+			return new Env();
+		}
+
+		public static Env CloneEnv(Env env) {
+			return new Env(env);
+		}
+
+		public static float Eval(Node node, Env env) {
 			switch (node.type) {
 				case Node.Num:
 					return node.num;
+				case Node.Var:
+					if (!env.ContainsKey(node.id)) throw new Exception("Never defined " + node.id);
+					return env[node.id];
 
 				case Node.Add:
-					return Eval(node.left) + Eval(node.right);
+					return Eval(node.left, env) + Eval(node.right, env);
 				case Node.Sub:
-					return Eval(node.left) - Eval(node.right);
+					return Eval(node.left, env) - Eval(node.right, env);
 				case Node.Mul:
-					return Eval(node.left) * Eval(node.right);
+					return Eval(node.left, env) * Eval(node.right, env);
 				case Node.Div:
-					return Eval(node.left) / Eval(node.right);
+					return Eval(node.left, env) / Eval(node.right, env);
 
 				case Node.Pos:
-					return +Eval(node.left);
+					return +Eval(node.left, env);
 				case Node.Neg:
-					return -Eval(node.left);
+					return -Eval(node.left, env);
+
+				case Node.Prog:
+					return Eval(node.left, env);
+
+				case Node.Blck:
+					env = CloneEnv(env);
+					for (int i = 0; i < node.children.Length; i++) {
+						Eval(node.children[i], env);
+					}
+					return 0;
+
+				case Node.NoOp:
+					return 0;
+
+				case Node.Asgn:
+					return env[node.left.id] = Eval(node.right, env);
 
 				default:
 					throw new Exception("Code pass not possible");

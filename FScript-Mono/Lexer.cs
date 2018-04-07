@@ -35,6 +35,8 @@ namespace FScriptMono {
 		static Token Number() {
 			sb.Clear();
 			while (position < text.Length && char.IsDigit(text[position])) sb.Append(text[position++]);
+			if (position < text.Length && text[position] == '.') sb.Append(text[position++]);
+			while (position < text.Length && char.IsDigit(text[position])) sb.Append(text[position++]);
 			return new Token{ type = Token.Num, num = float.Parse(sb.ToString()) };
 		}
 

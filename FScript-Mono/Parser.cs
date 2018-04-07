@@ -55,7 +55,7 @@ namespace FScriptMono {
 			return node;
 		}
 
-		public static Node Expr() {
+		static Node Expr() {
 			var node = Term();
 			Token token;
 			while ((token = Lexer.Prefer(Token.Plus, Token.Minus)).type != Token.Mis) {
@@ -71,7 +71,7 @@ namespace FScriptMono {
 			return new Node{ type = Node.Asgn, left = left, right = right };
 		}
 
-		static Node Stmt() {
+		public static Node Stmt() {
 			var token = Lexer.Peek();
 			if (token.type == Token.LCurly) return Block();
 			if (token.type == Token.Id) return Asgn();
