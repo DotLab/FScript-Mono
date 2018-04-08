@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace FuScript {
 	public sealed class Node {
 		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2, Statement = 3, Program = 4;
-		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8, Call = 9;
+		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8, Call = 9, FuncDecl = 10, Return = 11;
 
 		public readonly byte type, token;
 		public readonly Node child1, child2, child3, child4;
@@ -17,6 +17,11 @@ namespace FuScript {
 		public Node(byte type, byte token) {
 			this.type = type;
 			this.token = token;
+		}
+
+		public Node(byte type, Node children) {
+			this.type = type;
+			this.child1 = children;
 		}
 
 		public Node(byte type, Node[] children) {
@@ -96,6 +101,13 @@ namespace FuScript {
 			this.child1 = node1;
 		}
 
+		public Node(byte type, string stringLiteral, Node node1, Node[] children) {
+			this.type = type;
+			this.stringLiteral = stringLiteral;
+			this.child1 = node1;
+			this.children = children;
+		}
+
 		public override string ToString() {
 			switch (type) {
 			case Node.BinaryOp:
@@ -149,9 +161,9 @@ namespace FuScript {
 			case Node.Program:
 				int length = children.Length;
 				var sb = new System.Text.StringBuilder();
-				sb.Append("< ");
+//				sb.Append("< ");
 				for (int i = 0; i < length; i++) sb.Append(children[i]);
-				sb.Append(">");
+//				sb.Append(">");
 				return sb.ToString();
 			case Node.VarDecl:
 				return child1 == null ? "var " + stringLiteral : "var " + stringLiteral + " = " + child1 + "; ";
@@ -177,6 +189,21 @@ namespace FuScript {
 				}	
 				sb.Append(")");
 				return sb.ToString();
+			case Node.FuncDecl:
+				sb = new System.Text.StringBuilder();
+				sb.Append("function ");
+				sb.Append(stringLiteral);
+				sb.Append(" (");
+				length = children.Length;
+				for (int i = 0; i < length; i++) {
+					sb.Append(children[i].stringLiteral);
+					if (i + 1 < length) sb.Append(", ");
+				}
+				sb.Append(") ");
+				sb.Append(child1);
+				return sb.ToString();
+			case Node.Return:
+				return "return " + child1 + "; ";
 			default:
 				throw new System.Exception("Code path not possible");
 			}
@@ -233,12 +260,31 @@ namespace FuScript {
 		}
 
 		/**
-		 * declaration -> valDecl
+		 * declaration -> funcDecl
+		 *              | varDecl
 		 *              | statement
 		 */
 		static Node Declaration() {
 			if (Peek(Token.KVar)) return VarDecl();
+			if (Peek(Token.KFunc)) return FuncDecl();
 			return Statement();
+		}
+
+		/**
+		 * funcDecl -> "function" IDENTIFIER "(" (IDENTIFIER ("," IDENTIFIER)*)? ")" block
+		 */
+		static Node FuncDecl() {
+			Eat(Token.KFunc);
+			var id = Eat(Token.Id).stringLiteral;
+			Eat(Token.LParen);
+			var list = new List<Node>();
+			if (!Peek(Token.RParen)) {
+				do {
+					list.Add(new Node(Node.Variable, Eat(Token.Id).stringLiteral));
+				} while (Match(Token.Comma));
+			}
+			Eat(Token.RParen);
+			return new Node(Node.FuncDecl, id, Block(), list.ToArray());
 		}
 
 		/**
@@ -257,6 +303,7 @@ namespace FuScript {
 		 *            | ifStmt
 		 *            | whileStmt
 		 *            | forStmt
+		 *            | returnStmt
 		 *            | printStmt
 		 *            | exprStmt
 		 */
@@ -265,6 +312,7 @@ namespace FuScript {
 			if (Peek(Token.KIf)) return IfStmt();
 			if (Peek(Token.KWhile)) return WhileStmt(); 
 			if (Peek(Token.KFor)) return ForStmt(); 
+			if (Peek(Token.KReturn)) return ReturnStmt();
 			if (Peek(Token.KPrint)) return PrintStmt();
 			return ExprStmt();
 		}
@@ -323,6 +371,17 @@ namespace FuScript {
 			if (!Peek(Token.RParen)) incr = Expression();
 			Eat(Token.RParen);
 			return new Node(Node.Statement, Token.KFor, init, cond, incr, Statement());
+		}
+
+		/**
+		 * returnStmt -> "return" expression? ";"
+		 */
+		static Node ReturnStmt() {
+			Eat(Token.KReturn);
+			Node expr = null;
+			if (!Peek(Token.Semi)) expr = Expression();
+			Eat(Token.Semi);
+			return new Node(Node.Return, expr);
 		}
 
 		/**

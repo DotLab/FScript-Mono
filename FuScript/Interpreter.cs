@@ -91,6 +91,7 @@ namespace FuScript {
 			case Value.False:       return "false";
 			case Value.Number:      return numberValue.ToString();
 			case Value.String:      return "'" + stringValue + "'";
+			case Value.Function:    return "function (" + arity + ") {...}";
 			default:
 				throw new System.Exception("Code path not possible");
 			}
@@ -241,6 +242,15 @@ namespace FuScript {
 				length = node.children.Length;
 				for (int i = 0; i < length; i++) args[i] = Eval(node.children[i], env);
 				return callee.function(args);
+			case Node.FuncDecl:
+				length = node.children.Length;
+				var closure = CopyEnv(env);
+				var func = new Value((byte)length, arg => {
+					for (int i = 0; i < length; i++) closure[node.children[i].stringLiteral] = new ValueRef(arg[i]);
+					return Eval(node.child1, closure);
+				});
+				env[node.stringLiteral] = new ValueRef(func);
+				return func;
 			default:
 				throw new System.Exception("Code path not possible");
 			}

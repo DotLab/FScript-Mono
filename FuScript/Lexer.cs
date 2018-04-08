@@ -108,6 +108,7 @@ namespace FuScript {
 			_keywords.Add("else",     Token.KElse);
 			_keywords.Add("false",    Token.KFalse);
 			_keywords.Add("for",      Token.KFor);
+			_keywords.Add("fun", Token.KFunc);
 			_keywords.Add("function", Token.KFunc);
 			_keywords.Add("if",       Token.KIf);
 			_keywords.Add("null",     Token.KNull);
