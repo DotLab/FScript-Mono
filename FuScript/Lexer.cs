@@ -60,7 +60,7 @@
 			keywords.Add("var",      Token.Var);
 			keywords.Add("function", Token.Function);
 			keywords.Add("print",    Token.Print);
-			keywords.Add("eof",      Token.Print);
+			keywords.Add("eof",      Token.Eof);
 		}
 
 		static string text;
@@ -68,25 +68,25 @@
 
 		static string[] strings = new string[256];
 		static double[] numbers = new double[256];
-		static byte spos, npos;
+		static byte scount, ncount;
 
 		static byte[] tokens = new byte[32767];
-		static int tpos;
+		static int tcount;
 
 		static void Add(byte type) {
-			tokens[tpos++] = type;
+			tokens[tcount++] = type;
 		}
 
 		static void Add(byte type, string str) {
-			tokens[tpos++] = type;
-			tokens[tpos++] = spos;
-			strings[spos++] = str;
+			tokens[tcount++] = type;
+			tokens[tcount++] = scount;
+			strings[scount++] = str;
 		}
 
 		static void Add(byte type, double num) {
-			tokens[tpos++] = type;
-			tokens[tpos++] = npos;
-			numbers[npos++] = num;
+			tokens[tcount++] = type;
+			tokens[tcount++] = ncount;
+			numbers[ncount++] = num;
 		}
 
 		static bool Match(char c) {
@@ -104,7 +104,7 @@
 
 		public static void Scan(string text) {
 			Lexer.text = text; length = text.Length;
-			pos = 0; spos = 0; npos = 0; tpos = 0;
+			pos = 0; scount = 0; ncount = 0; tcount = 0;
 
 			while (pos < length) {
 				char c = text[pos++];
@@ -143,7 +143,7 @@
 				}
 			}
 
-			Add(Token.Eof);
+			if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
 		}
 
 		static void Number() {
@@ -176,7 +176,7 @@
 			sb.Clear();
 
 			int i = 0;
-			while (i < pos) {
+			while (i < tcount) {
 				switch (tokens[i++]) {
 				case Token.LParen:      sb.Append("("); break;
 				case Token.RParen:      sb.Append(")"); break;
@@ -238,6 +238,8 @@
 				default:
 					throw new UnrecognizedTokenException(tokens[i]);
 				}
+
+				sb.Append(" ");
 			}
 
 			return sb.ToString();
