@@ -1,149 +1,97 @@
-﻿using System.Text;
-using System.Collections.Generic;
+﻿namespace FuScript {
+	public static class Token {
+		// One
+		public const byte LParen = 0, RParen = 1, LCurly = 2, RCurly = 3, LSquare = 4, RSquare = 5;
+		public const byte Comma = 6, Dot = 7, Semi = 8;
 
-namespace FuScript {
-	public sealed class Token {
-		// Single character
-		public const byte LParen = 0, RParen = 1, LCurly = 2, RCurly = 3;
-		public const byte Comma = 4, Dot = 5, Minus = 6, Plus = 7, Semi = 8, Slash = 9, Star = 10;
+		// One or two
+		public const byte Minus = 20, MinusEqual = 21;
+		public const byte Plus = 22,  PlusEqual = 23;
+		public const byte Slash = 24, SlashEqual = 25;
+		public const byte Star = 26,  StarEqual = 27;
 
-		// One or two characters
-		public const byte Bang = 11, BangEqual = 12;
-		public const byte Equal = 36, EqualEqual = 37;
-		public const byte LAngle = 13, LAngleEqual = 14, LAngleAngle = 42;
-		public const byte RAngle = 15, RAngleEqual = 16, RAngleAngle = 43;
-		public const byte And = 38, AndAnd = 39;
-		public const byte Or = 40, OrOr = 41;
+		// One or two
+		public const byte Bang = 40,   BangEqual = 41;
+		public const byte Equal = 42,  EqualEqual = 43;
 
-		// Literals
-		public const byte Id = 17, String = 18, Number = 19;
+		public const byte LAngle = 44, LAngleEqual = 45, LAngleAngle = 46;
+		public const byte RAngle = 47, RAngleEqual = 48, RAngleAngle = 49;
+		public const byte And = 50,    AndEqual = 54,    AndAnd = 51;
+		public const byte Or = 52,     OrEqual = 55,     OrOr = 53;
+
+		// Literal
+		public const byte Id = 60, String = 61, Number = 62;
 
 		// Keywords
-		public const byte KClass = 21, KElse = 22, KFalse = 23, KFunc = 24, KFor = 25, KIf = 26, KNull = 27;
-		public const byte KPrint = 29, KReturn = 30, KSuper = 31, KThis = 32, KTrue = 33, KVar = 34, KWhile = 35;
+		public const byte True = 70, False = 71, Null = 72;
+		public const byte If = 73, Else = 74;
+		public const byte While = 75, Do = 76, For = 77;
+		public const byte Return = 78, Break = 79, Continue = 80;
+		public const byte Var = 81, Function = 82;
+		public const byte Print = 83;
 
-		// EOF
+		// Eof
 		public const byte Eof = 255;
+	}
 
-		public readonly byte type;
-		public readonly string stringLiteral;
-		public readonly float numberLiteral;
+	public class UnexpectedCharacterException : System.Exception {
+		public UnexpectedCharacterException(char c) : base("Lexer: Unexpected character '" + c + "'") {}
+	}
 
-		public Token(byte type) {
-			this.type = type;
-		}
-
-		public Token(byte type, string stringLiteral) {
-			this.type = type;
-			this.stringLiteral = stringLiteral;
-		}
-
-		public Token(byte type, float numberLiteral) {
-			this.type = type;
-			this.numberLiteral = numberLiteral;
-		}
-
-		public override string ToString() {
-			switch (type) {
-			case Token.LParen:      return "(";
-			case Token.RParen:      return ")";
-			case Token.LCurly:      return "{";
-			case Token.RCurly:      return "}";
-			case Token.Comma:       return ",";
-			case Token.Dot:         return ".";
-			case Token.Minus:       return "-";
-			case Token.Plus:        return "+";
-			case Token.Semi:        return ";";
-			case Token.Slash:       return "/";
-			case Token.Star:        return "*";
-			case Token.Bang:        return "!";
-			case Token.BangEqual:   return "!=";
-			case Token.Equal:       return "=";
-			case Token.EqualEqual:  return "==";
-			case Token.LAngle:      return "<";
-			case Token.LAngleEqual: return "<=";
-			case Token.LAngleAngle: return "<<";
-			case Token.RAngle:      return ">";
-			case Token.RAngleEqual: return ">=";
-			case Token.RAngleAngle: return ">>";
-			case Token.And:         return "&";
-			case Token.AndAnd:      return "&&";
-			case Token.Or:          return "|";
-			case Token.OrOr:        return "||";
-			case Token.Id:          return stringLiteral;
-			case Token.String:      return "'" + stringLiteral + "'";
-			case Token.Number:      return numberLiteral.ToString();
-			case Token.KClass:      return "CLASS";
-			case Token.KElse:       return "ELSE";
-			case Token.KFalse:      return "FALSE";
-			case Token.KFunc:       return "FUNC";
-			case Token.KFor:        return "FOR";
-			case Token.KIf:         return "IF";
-			case Token.KNull:       return "NULL";
-			case Token.KPrint:      return "PRINT";
-			case Token.KReturn:     return "RETURN";
-			case Token.KSuper:      return "SUPER";
-			case Token.KThis:       return "THIS";
-			case Token.KTrue:       return "TRUE";
-			case Token.KVar:        return "VAR";
-			case Token.KWhile:      return "WHILE";
-			case Token.Eof:         return "#";
-			default:
-				throw new System.Exception("Code path not possible");
-			}
-		}
+	public class UnrecognizedTokenException : System.Exception {
+		public UnrecognizedTokenException(byte t) : base("Lexer: Unrecognized token #" + t) {}
 	}
 
 	public static class Lexer {
-		static string _text;
-		static int _pos, _length;
+		static readonly System.Collections.Generic.Dictionary<string, byte> keywords = new System.Collections.Generic.Dictionary<string, byte>();
 
-		static readonly List<Token> _list = new List<Token>();
-		static readonly StringBuilder _sb = new StringBuilder();
-		static readonly Dictionary<string, byte> _keywords = new Dictionary<string, byte>();
-
-		static Lexer() {    
-			_keywords.Add("and",      Token.AndAnd);
-			_keywords.Add("class",    Token.KClass);
-			_keywords.Add("else",     Token.KElse);
-			_keywords.Add("false",    Token.KFalse);
-			_keywords.Add("for",      Token.KFor);
-			_keywords.Add("fun", Token.KFunc);
-			_keywords.Add("function", Token.KFunc);
-			_keywords.Add("if",       Token.KIf);
-			_keywords.Add("null",     Token.KNull);
-			_keywords.Add("or",       Token.OrOr);
-			_keywords.Add("print",    Token.KPrint);
-			_keywords.Add("return",   Token.KReturn);
-			_keywords.Add("super",    Token.KSuper);
-			_keywords.Add("this",     Token.KThis);
-			_keywords.Add("true",     Token.KTrue);
-			_keywords.Add("var",      Token.KVar);
-			_keywords.Add("while",    Token.KWhile);
+		static Lexer() {
+			keywords.Add("true",     Token.True);
+			keywords.Add("false",    Token.False);
+			keywords.Add("null",     Token.Null);
+			keywords.Add("if",       Token.If);
+			keywords.Add("else",     Token.Else);
+			keywords.Add("while",    Token.While);
+			keywords.Add("do",       Token.Do);
+			keywords.Add("for",      Token.For);
+			keywords.Add("return",   Token.Return);
+			keywords.Add("break",    Token.Break);
+			keywords.Add("continue", Token.Continue);
+			keywords.Add("var",      Token.Var);
+			keywords.Add("function", Token.Function);
+			keywords.Add("print",    Token.Print);
+			keywords.Add("eof",      Token.Print);
 		}
+
+		static string text;
+		static int pos, length;
+
+		static string[] strings = new string[256];
+		static double[] numbers = new double[256];
+		static byte spos, npos;
+
+		static byte[] tokens = new byte[32767];
+		static int tpos;
 
 		static void Add(byte type) {
-			_list.Add(new Token(type));
+			tokens[tpos++] = type;
 		}
 
-		static void Add(byte type, string stringLiteral) {
-			_list.Add(new Token(type, stringLiteral));
+		static void Add(byte type, string str) {
+			tokens[tpos++] = type;
+			tokens[tpos++] = spos;
+			strings[spos++] = str;
 		}
-		static void Add(byte type, float numberLiteral) {
-			_list.Add(new Token(type, numberLiteral));
+
+		static void Add(byte type, double num) {
+			tokens[tpos++] = type;
+			tokens[tpos++] = npos;
+			numbers[npos++] = num;
 		}
 
 		static bool Match(char c) {
-			if (_text[_pos] != c) return false;
-			_pos += 1;
-			return true;
-		}
-
-		static void String(char quote) {
-			int start = _pos;
-			while (_pos < _length && _text[_pos] != quote) _pos += 1;
-			Add(Token.String, _text.Substring(start, _pos - start));
-			_pos += 1;  // Close quote
+			if (text[pos] == c) { pos += 1; return true; }
+			return false;
 		}
 
 		static bool IsDigit(char c) {
@@ -154,80 +102,145 @@ namespace FuScript {
 			return ('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || c == '_';
 		}
 
-		static void Number() {
-			int start = _pos - 1;
-			while (_pos < _length && IsDigit(_text[_pos])) _pos += 1;
-			if (_pos + 1 < _length && _text[_pos] == '.' && IsDigit(_text[_pos + 1])) {
-				_pos += 1;  // Decimal point
-				while (_pos < _length && IsDigit(_text[_pos])) _pos += 1;
-			}
-			Add(Token.Number, float.Parse(_text.Substring(start, _pos - start)));
-		}
+		public static void Scan(string text) {
+			Lexer.text = text; length = text.Length;
+			pos = 0; spos = 0; npos = 0; tpos = 0;
 
-		static void Id() {
-			int start = _pos - 1;
-			while (_pos < _length && (IsAlpha(_text[_pos]) || IsDigit(_text[_pos]))) _pos += 1;
-
-			string id = _text.Substring(start, _pos - start);
-			if (_keywords.ContainsKey(id)) Add(_keywords[id]);
-			else Add(Token.Id, id);
-		}
-
-		public static Token[] Scan(string text) {
-			_text = text;
-			_pos = 0;
-			_length = text.Length;
-			_list.Clear();
-
-			while (_pos < _length) {
-				char c = _text[_pos++];
+			while (pos < length) {
+				char c = text[pos++];
 				switch (c) {
 				case '(': Add(Token.LParen); break;
 				case ')': Add(Token.RParen); break;
 				case '{': Add(Token.LCurly); break;
 				case '}': Add(Token.RCurly); break;
+				case '[': Add(Token.LSquare); break;
+				case ']': Add(Token.RSquare); break;
 				case ',': Add(Token.Comma); break;
 				case '.': Add(Token.Dot); break;
-				case '-': Add(Token.Minus); break;
-				case '+': Add(Token.Plus); break;
 				case ';': Add(Token.Semi); break;
-				case '/': Add(Token.Slash); break;
-				case '*': Add(Token.Star); break;
-				case '!': Add(Match('=') ? Token.BangEqual : Token.Bang); break;
-				case '=': Add(Match('=') ? Token.EqualEqual : Token.Equal); break;
+					
+				case '-': Add(Match('=') ? Token.MinusEqual  : Token.Minus); break;
+				case '+': Add(Match('=') ? Token.PlusEqual   : Token.Plus); break;
+				case '/': Add(Match('=') ? Token.SlashEqual  : Token.Slash); break;
+				case '*': Add(Match('=') ? Token.StarEqual   : Token.Star); break;
+					
+				case '!': Add(Match('=') ? Token.BangEqual   : Token.Bang); break;
+				case '=': Add(Match('=') ? Token.EqualEqual  : Token.Equal); break;
+
 				case '<': Add(Match('=') ? Token.LAngleEqual : Match('<') ? Token.LAngleAngle : Token.LAngle); break;
-				case '>': Add(Match('=') ? Token.RAngleEqual : Match('>') ? Token.LAngleAngle : Token.RAngle); break;
-				case '&': Add(Match('&') ? Token.AndAnd : Token.And); break;
-				case '|': Add(Match('|') ? Token.OrOr : Token.Or); break;
-				case ' ':
-				case '\r':
-				case '\t':
-				case '\n':
-					break;
-				case '"':
-				case '\'':
-					String(c); break;
+				case '>': Add(Match('=') ? Token.RAngleEqual : Match('>') ? Token.RAngleAngle : Token.RAngle); break;
+				case '&': Add(Match('=') ? Token.AndEqual    : Match('&') ? Token.AndAnd :      Token.And); break;
+				case '|': Add(Match('=') ? Token.OrEqual     : Match('|') ? Token.OrOr :        Token.Or); break;
+				
+				case ' ': case '\r': case '\t': case '\n': break;
+	
+				case '"': case '\'': String(c); break;
 				default:
 					if (IsDigit(c)) Number();
 					else if (IsAlpha(c)) Id();
-					else throw new System.Exception("Unexpected character " + c);
+					else throw new UnexpectedCharacterException(c);
 					break;
 				}
 			}
 
 			Add(Token.Eof);
-			return _list.ToArray();
 		}
 
-		public static string ToString(Token[] tokens) {
-			_sb.Clear();
-			int length = tokens.Length;
-			for (int i = 0; i < length; i++) {
-				_sb.Append(tokens[i].ToString());
-				_sb.Append(' ');
+		static void Number() {
+			int start = pos - 1;
+			while (pos < length && IsDigit(text[pos])) pos += 1;
+			if (pos + 1 < length && text[pos] == '.' && IsDigit(text[pos + 1])) {
+				pos += 1;  // Decimal point
+				while (pos < length && IsDigit(text[pos])) pos += 1;
 			}
-			return _sb.ToString();
+			Add(Token.Number, double.Parse(text.Substring(start, pos - start)));
+		}
+
+		static void String(char quote) {
+			int start = pos;
+			while (pos < length && text[pos] != quote) pos += 1;
+			Add(Token.String, text.Substring(start, pos - start));
+			pos += 1;  // Close quote
+		}
+
+		static void Id() {
+			int start = pos - 1;
+			while (pos < length && (IsAlpha(text[pos]) || IsDigit(text[pos]))) pos += 1;
+			string id = text.Substring(start, pos - start);
+			if (keywords.ContainsKey(id)) Add(keywords[id]);
+			else Add(Token.Id, id);
+		}
+
+		static readonly System.Text.StringBuilder sb = new System.Text.StringBuilder();
+		public static string Recant() {
+			sb.Clear();
+
+			int i = 0;
+			while (i < pos) {
+				switch (tokens[i++]) {
+				case Token.LParen:      sb.Append("("); break;
+				case Token.RParen:      sb.Append(")"); break;
+				case Token.LCurly:      sb.Append("{"); break;
+				case Token.RCurly:      sb.Append("}"); break;
+				case Token.LSquare:     sb.Append("["); break;
+				case Token.RSquare:     sb.Append("]"); break;
+				case Token.Comma:       sb.Append(","); break;
+				case Token.Dot:         sb.Append("."); break;
+				case Token.Semi:        sb.Append(";"); break;
+
+				case Token.Minus:       sb.Append("-"); break;
+				case Token.MinusEqual:  sb.Append("-="); break;
+				case Token.Plus:        sb.Append("+"); break;
+				case Token.PlusEqual:   sb.Append("+="); break;
+				case Token.Slash:       sb.Append("/"); break;
+				case Token.SlashEqual:  sb.Append("/="); break;
+				case Token.Star:        sb.Append("*"); break;
+				case Token.StarEqual:   sb.Append("*="); break;
+
+				case Token.Bang:        sb.Append("!"); break;
+				case Token.BangEqual:   sb.Append("!="); break;
+				case Token.Equal:       sb.Append("="); break;
+				case Token.EqualEqual:  sb.Append("=="); break;
+
+				case Token.LAngle:      sb.Append("<"); break;
+				case Token.LAngleEqual: sb.Append("<="); break;
+				case Token.LAngleAngle: sb.Append("<<"); break;
+				case Token.RAngle:      sb.Append(">"); break;
+				case Token.RAngleEqual: sb.Append(">="); break;
+				case Token.RAngleAngle: sb.Append(">>"); break;
+				case Token.And:         sb.Append("&"); break;
+				case Token.AndEqual:    sb.Append("&="); break;
+				case Token.AndAnd:      sb.Append("&&"); break;
+				case Token.Or:          sb.Append("|"); break;
+				case Token.OrEqual:     sb.Append("|="); break;
+				case Token.OrOr:        sb.Append("||"); break;
+
+				case Token.Id:          sb.Append(strings[tokens[i++]]); break;
+				case Token.String:      sb.Append("'"); sb.Append(strings[tokens[i++]]); sb.Append("'"); break;
+				case Token.Number:      sb.Append(numbers[tokens[i++]]); break;
+
+				case Token.True:        sb.Append("true"); break;
+				case Token.False:       sb.Append("false"); break;
+				case Token.Null:        sb.Append("null"); break;
+				case Token.If:          sb.Append("if"); break;
+				case Token.Else:        sb.Append("else"); break;
+				case Token.While:       sb.Append("while"); break;
+				case Token.Do:          sb.Append("do"); break;
+				case Token.For:         sb.Append("for"); break;
+				case Token.Return:      sb.Append("return"); break;
+				case Token.Break:       sb.Append("break"); break;
+				case Token.Continue:    sb.Append("continue"); break;
+				case Token.Var:         sb.Append("var"); break;
+				case Token.Function:    sb.Append("function"); break;
+				case Token.Print:       sb.Append("print"); break;
+				case Token.Eof:         sb.Append("eof"); break;
+					
+				default:
+					throw new UnrecognizedTokenException(tokens[i]);
+				}
+			}
+
+			return sb.ToString();
 		}
 	}
 }
-

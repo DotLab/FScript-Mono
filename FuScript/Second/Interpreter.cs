@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.Second.ValueRef>;
 
-namespace FuScript {
+namespace FuScript.Second {
 	public sealed class Return : Exception {
 		public Value value;
 

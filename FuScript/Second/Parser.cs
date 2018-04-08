@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 
-namespace FuScript {
+namespace FuScript.Second {
 	public sealed class Node {
 		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2, Statement = 3, Program = 4;
 		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8, Call = 9, FuncDecl = 10, Return = 11;
