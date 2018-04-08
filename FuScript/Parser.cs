@@ -7,7 +7,7 @@ namespace FuScript {
 		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8;
 
 		public readonly byte type, token;
-		public readonly Node child1, child2, child3;
+		public readonly Node child1, child2, child3, child4;
 		public readonly Node[] children;
 
 		public readonly bool boolLiteral;
@@ -35,6 +35,23 @@ namespace FuScript {
 			this.token = token;
 			this.child1 = node1;
 			this.child2 = node2;
+		}
+
+		public Node(byte type, byte token, Node node1, Node node2, Node node3) {
+			this.type = type;
+			this.token = token;
+			this.child1 = node1;
+			this.child2 = node2;
+			this.child3 = node3;
+		}
+
+		public Node(byte type, byte token, Node node1, Node node2, Node node3, Node node4) {
+			this.type = type;
+			this.token = token;
+			this.child1 = node1;
+			this.child2 = node2;
+			this.child3 = node3;
+			this.child4 = node4;
 		}
 
 		public Node(byte type, byte token, bool boolLiteral) {
@@ -99,7 +116,7 @@ namespace FuScript {
 			case Node.UnaryOp:
 				switch (token) {
 				case Token.Minus:       return "-" + child1;
-				case Token.Bang:        return "!" + child2;
+				case Token.Bang:        return "!" + child1;
 				default:
 					throw new System.Exception("Code path not possible");
 				}
@@ -117,6 +134,9 @@ namespace FuScript {
 			case Node.Statement:
 				switch (token) {
 				case Token.KPrint:      return "print " + child1 + "; ";
+				case Token.KIf:         return "if (" + child1 + ") " + (child3 == null ? child2.ToString() : child2 + "else " + child3);
+				case Token.KWhile:      return "while (" + child1 + ") " + child2;
+				case Token.KFor:        return "for (" + (child1 == null ? "; " : child1.ToString()) + (child2 == null ? "; " : child2 + "; ") + (child3 == null ? ") " : child3 + ") ") + child4;
 				default:
 					throw new System.Exception("Code path not possible");
 				}
@@ -216,12 +236,18 @@ namespace FuScript {
 		}
 
 		/**
-		 * statement -> exprStmt
-		 *            | block
+		 * statement -> block
+		 *            | ifStmt
+		 *            | whileStmt
+		 *            | forStmt
 		 *            | printStmt
+		 *            | exprStmt
 		 */
 		public static Node Statement() {
 			if (Peek(Token.LCurly)) return Block();
+			if (Peek(Token.KIf)) return IfStmt();
+			if (Peek(Token.KWhile)) return WhileStmt(); 
+			if (Peek(Token.KFor)) return ForStmt(); 
 			if (Peek(Token.KPrint)) return PrintStmt();
 			return ExprStmt();
 		}
@@ -237,22 +263,68 @@ namespace FuScript {
 		}
 
 		/**
+		 * ifStmt -> "if" "(" expression ")" statement ("else" statement)?
+		 */
+		static Node IfStmt() {
+			Eat(Token.KIf);
+			Eat(Token.LParen);
+			var cond = Expression();
+			Eat(Token.RParen);
+			var then = Statement();
+			if (Match(Token.KElse)) {
+				var el = Statement();
+				return new Node(Node.Statement, Token.KIf, cond, then, el);
+			}
+			return new Node(Node.Statement, Token.KIf, cond, then);
+		}
+
+		/**
+		 * whileStmt -> "while" "(" expression ")" statement
+		 */
+		static Node WhileStmt() {
+			Eat(Token.KWhile);
+			Eat(Token.LParen);
+			var cond = Expression();
+			Eat(Token.RParen);
+			return new Node(Node.Statement, Token.KWhile, cond, Statement());
+		}
+
+		/**
+		 * forStmt -> "for" "(" (varDecl | exprStmt | ";") expression? ";" expression? ")" statement
+		 */
+		static Node ForStmt() {
+			Eat(Token.KFor);
+			Eat(Token.LParen);
+			Node init = null;
+			if (Match(Token.Semi)) init = null;
+			else if (Peek(Token.KVar)) init = VarDecl();
+			else init = ExprStmt();
+			Node cond = null;
+			if (!Peek(Token.Semi)) cond = Expression();
+			Eat(Token.Semi);
+			Node incr = null;
+			if (!Peek(Token.RParen)) incr = Expression();
+			Eat(Token.RParen);
+			return new Node(Node.Statement, Token.KFor, init, cond, incr, Statement());
+		}
+
+		/**
+		* printStmt -> "print" expression ";"
+		*/
+		static Node PrintStmt() {
+			Eat(Token.KPrint);
+			var node = new Node(Node.Statement, Token.KPrint, Expression());
+			Eat(Token.Semi);
+			return node;
+		}
+
+		/**
 		 * exprStmt -> expression ";"
 		 */
 		static Node ExprStmt() {
 			var expr = Expression();
 			Eat(Token.Semi);
 			return expr;
-		}
-
-		/**
-		 * printStmt -> "print" expression ";"
-		 */
-		static Node PrintStmt() {
-			var token = Eat(Token.KPrint);
-			var node = new Node(Node.Statement, token.type, Expression());
-			Eat(Token.Semi);
-			return node;
 		}
 
 		/**
@@ -264,16 +336,36 @@ namespace FuScript {
 
 		/**
 		 * assignment -> identifier "=" assignment
-		 *             | equality
+		 *             | logic_or
 		 */
 		static Node Assignment() {
-			var expr = Equality();
+			var expr = LogicOr();
 
 			if (Match(Token.Equal)) {
 				if (expr.type != Node.Variable) throw new Exception("Invalid assignment target");
 				return new Node(Node.Assignment, expr.stringLiteral, Assignment());
 			}
 
+			return expr;
+		}
+
+		/**
+		 * logic_or -> logic_and ("||" logic_and)*
+		 */
+		static Node LogicOr() {
+			var expr = LogicAnd();
+			while (Peek(Token.OrOr)) 
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, LogicAnd());
+			return expr;
+		}
+
+		/**
+		 * logic_and -> equality ("&&" equality)*
+		 */
+		static Node LogicAnd() {
+			var expr = Equality();
+			while (Peek(Token.AndAnd)) 
+				expr = MkBinaryOp(expr, _tokens[_pos++].type, Equality());
 			return expr;
 		}
 

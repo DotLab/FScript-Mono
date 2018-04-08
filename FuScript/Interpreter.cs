@@ -3,12 +3,15 @@ using System.Collections.Generic;
 using Env = System.Collections.Generic.Dictionary<string, FuScript.Value>;
 
 namespace FuScript {
-	public struct Value {
+	public sealed class Value {
 		public const byte Null = 0, True = 1, False = 2, Number = 3, String = 4;
 
 		public byte type;
 		public float numberValue;
 		public string stringValue;
+
+		public Value() {
+		}
 
 		public Value(bool boolean) {
 			type = boolean ? True : False;
@@ -26,6 +29,13 @@ namespace FuScript {
 			type = String;
 			numberValue = 0;
 			stringValue = str;
+		}
+
+		public Value Assign(Value other) {
+			type = other.type;
+			numberValue = other.numberValue;
+			stringValue = other.stringValue;
+			return this;
 		}
 		
 		public bool GetBoolean() {
@@ -82,28 +92,28 @@ namespace FuScript {
 			switch (node.type) {
 			case Node.BinaryOp:
 				var left = Eval(node.child1, env);
-				var right = Eval(node.child2, env);
+				Value right;
 
 				switch (node.token) {
-				case Token.Minus:       return new Value(left.GetFloat() - right.GetFloat());
-				case Token.Plus:        return left.type != Value.String && right.type != Value.String ? new Value(left.GetFloat() + right.GetFloat()) : new Value(left.GetString() + right.GetString());
-				case Token.Slash:       return new Value(left.GetFloat() / right.GetFloat());
-				case Token.Star:        return new Value(left.GetFloat() * right.GetFloat());
+				case Token.Minus:       right = Eval(node.child2, env); return new Value(left.GetFloat() - right.GetFloat());
+				case Token.Plus:        right = Eval(node.child2, env); return left.type != Value.String && right.type != Value.String ? new Value(left.GetFloat() + right.GetFloat()) : new Value(left.GetString() + right.GetString());
+				case Token.Slash:       right = Eval(node.child2, env); return new Value(left.GetFloat() / right.GetFloat());
+				case Token.Star:        right = Eval(node.child2, env); return new Value(left.GetFloat() * right.GetFloat());
 
-				case Token.BangEqual:   return new Value(left.type != right.type ? false : left.type == Value.String ? left.GetString() != right.GetString() : left.GetFloat() != right.GetFloat()); 
-				case Token.EqualEqual:  return new Value(left.type != right.type ? false : left.type == Value.String ? left.GetString() == right.GetString() : left.GetFloat() == right.GetFloat()); 
-				case Token.LAngle:      return new Value(left.GetFloat() <  right.GetFloat());  
-				case Token.LAngleEqual: return new Value(left.GetFloat() <= right.GetFloat());  
-				case Token.RAngle:      return new Value(left.GetFloat() >  right.GetFloat());  
-				case Token.RAngleEqual: return new Value(left.GetFloat() >= right.GetFloat());  
+				case Token.BangEqual:   right = Eval(node.child2, env); return new Value(left.type != right.type ? false : left.type == Value.String ? left.GetString() != right.GetString() : left.GetFloat() != right.GetFloat()); 
+				case Token.EqualEqual:  right = Eval(node.child2, env); return new Value(left.type != right.type ? false : left.type == Value.String ? left.GetString() == right.GetString() : left.GetFloat() == right.GetFloat()); 
+				case Token.LAngle:      right = Eval(node.child2, env); return new Value(left.GetFloat() <  right.GetFloat());  
+				case Token.LAngleEqual: right = Eval(node.child2, env); return new Value(left.GetFloat() <= right.GetFloat());  
+				case Token.RAngle:      right = Eval(node.child2, env); return new Value(left.GetFloat() >  right.GetFloat());  
+				case Token.RAngleEqual: right = Eval(node.child2, env); return new Value(left.GetFloat() >= right.GetFloat());  
 				
-				case Token.LAngleAngle: return new Value(left.GetIngeter() << right.GetIngeter()); 
-				case Token.RAngleAngle: return new Value(left.GetIngeter() >> right.GetIngeter()); 
-				case Token.And:         return new Value(left.GetIngeter() &  right.GetIngeter()); 
-				case Token.Or:          return new Value(left.GetIngeter() |  right.GetIngeter()); 
+				case Token.LAngleAngle: right = Eval(node.child2, env); return new Value(left.GetIngeter() << right.GetIngeter()); 
+				case Token.RAngleAngle: right = Eval(node.child2, env); return new Value(left.GetIngeter() >> right.GetIngeter()); 
+				case Token.And:         right = Eval(node.child2, env); return new Value(left.GetIngeter() &  right.GetIngeter()); 
+				case Token.Or:          right = Eval(node.child2, env); return new Value(left.GetIngeter() |  right.GetIngeter()); 
 					
-				case Token.AndAnd:      return new Value(left.GetBoolean() && right.GetBoolean()); 
-				case Token.OrOr:        return new Value(left.GetBoolean() || right.GetBoolean()); 
+				case Token.AndAnd:      return !left.GetBoolean() ? left : Eval(node.child2, env);
+				case Token.OrOr:        return  left.GetBoolean() ? left : Eval(node.child2, env);;
 				default:
 					throw new System.Exception("Code path not possible");
 				}
@@ -130,6 +140,21 @@ namespace FuScript {
 			case Node.Statement:
 				switch (node.token) {
 				case Token.KPrint:      Console.WriteLine(Eval(node.child1, env)); return new Value();
+				case Token.KIf:
+					if (Eval(node.child1, env).GetBoolean()) return Eval(node.child2, env);
+					else if (node.child3 != null) return Eval(node.child3, env);
+					else return new Value();
+				case Token.KWhile:
+					while (Eval(node.child1, env).GetBoolean()) Eval(node.child2, env);
+					return new Value();
+				case Token.KFor:
+					env = CopyEnv(env);
+					if (node.child1 != null) Eval(node.child1, env);
+					while (node.child2 == null ? true : Eval(node.child2, env).GetBoolean()) {
+						Eval(node.child4, env);
+						Eval(node.child3, env);
+					}
+					return new Value();
 				default:
 					throw new System.Exception("Code path not possible");
 				}
@@ -145,7 +170,7 @@ namespace FuScript {
 				return env[node.stringLiteral];
 			case Node.Assignment:
 				if (!env.ContainsKey(node.stringLiteral)) throw new Exception("Variable never defined");
-				return env[node.stringLiteral] = Eval(node.child1, env);
+				return env[node.stringLiteral].Assign(Eval(node.child1, env));
 			case Node.Block:
 				env = CopyEnv(env);
 				length = node.children.Length;
