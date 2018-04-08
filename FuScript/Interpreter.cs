@@ -141,7 +141,16 @@ namespace FuScript {
 				var value = node.child1 == null ? new Value() : Eval(node.child1, env);
 				return env[node.stringLiteral] = value;
 			case Node.Variable:
+				if (!env.ContainsKey(node.stringLiteral)) throw new Exception("Variable never defined");
 				return env[node.stringLiteral];
+			case Node.Assignment:
+				if (!env.ContainsKey(node.stringLiteral)) throw new Exception("Variable never defined");
+				return env[node.stringLiteral] = Eval(node.child1, env);
+			case Node.Block:
+				env = CopyEnv(env);
+				length = node.children.Length;
+				for (int i = 0; i < length; i++) Eval(node.children[i], env);
+				return new Value();
 			default:
 				throw new System.Exception("Code path not possible");
 			}
