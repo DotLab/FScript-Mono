@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace FuScript {
 	public sealed class Node {
 		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2, Statement = 3, Program = 4;
-		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8;
+		public const byte VarDecl = 5, Variable = 6, Assignment = 7, Block = 8, Call = 9;
 
 		public readonly byte type, token;
 		public readonly Node child1, child2, child3, child4;
@@ -21,6 +21,12 @@ namespace FuScript {
 
 		public Node(byte type, Node[] children) {
 			this.type = type;
+			this.children = children;
+		}
+
+		public Node(byte type, Node child1, Node[] children) {
+			this.type = type;
+			this.child1 = child1;
 			this.children = children;
 		}
 
@@ -159,6 +165,17 @@ namespace FuScript {
 				sb.Append("{ ");
 				for (int i = 0; i < length; i++) sb.Append(children[i]);
 				sb.Append("} ");
+				return sb.ToString();
+			case Node.Call:
+				sb = new System.Text.StringBuilder();
+				sb.Append(child1.ToString());
+				sb.Append("(");
+				length = children.Length;
+				for (int i = 0; i < length; i++) {
+					sb.Append(children[i]);
+					if (i < length - 1) sb.Append(", ");
+				}	
+				sb.Append(")");
 				return sb.ToString();
 			default:
 				throw new System.Exception("Code path not possible");
@@ -421,12 +438,33 @@ namespace FuScript {
 
 		/** 
 		 * unary -> ("!" | "-") unary
-		 *        | primary
+		 *        | call
 		 */
 		static Node Unary() {
 			if (Peek(Token.Bang, Token.Minus)) 
 				return MkUnaryOp(_tokens[_pos++].type, Unary());
-			return Primary();
+			return Call();
+		}
+
+		/**
+		 * call -> primary ("(" (expression ("," expression)*)? ")")*
+		 */
+		static Node Call() {
+			var expr = Primary();
+
+			var list = new List<Node>();
+			while (true) {
+				if (Match(Token.LParen)) {
+					list.Clear();
+					if (!Peek(Token.RParen)) {
+						do list.Add(Expression()); while (Match(Token.Comma));
+					}
+					Eat(Token.RParen);
+					expr = new Node(Node.Call, expr, list.ToArray());
+				} else break;
+			}
+
+			return expr;
 		}
 
 		/**

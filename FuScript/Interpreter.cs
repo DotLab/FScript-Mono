@@ -1,34 +1,52 @@
 ﻿using System;
 using System.Collections.Generic;
-using Env = System.Collections.Generic.Dictionary<string, FuScript.Value>;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
 
 namespace FuScript {
-	public sealed class Value {
-		public const byte Null = 0, True = 1, False = 2, Number = 3, String = 4;
+	public delegate Value Func(Value[] values);
 
-		public byte type;
-		public float numberValue;
+	public struct Value {
+		public const byte Null = 0, True = 1, False = 2, Number = 3, String = 4, Function = 5;
+
+		public byte type, arity;
+		public double numberValue;
 		public string stringValue;
-
-		public Value() {
-		}
+		public Func function;
 
 		public Value(bool boolean) {
 			type = boolean ? True : False;
 			numberValue = 0;
 			stringValue = null;
+
+			arity = 0;
+			function = null;
 		}
 
-		public Value(float number) {
+		public Value(double number) {
 			type = Number;
 			numberValue = number;
 			stringValue = null;
+
+			arity = 0;
+			function = null;
 		}
 
 		public Value(string str) {
 			type = String;
 			numberValue = 0;
 			stringValue = str;
+
+			arity = 0;
+			function = null;
+		}
+
+		public Value(byte n, Func func) {
+			type = Function;
+			arity = n;
+			function = func;
+
+			numberValue = 0;
+			stringValue = null;
 		}
 
 		public Value Assign(Value other) {
@@ -43,7 +61,7 @@ namespace FuScript {
 			return true;
 		}
 
-		public float GetFloat() {
+		public double GetFloat() {
 			if (type == Number) return numberValue;
 			if (type == Null || type == False) return 0;
 			if (type == True) return 1;
@@ -79,9 +97,47 @@ namespace FuScript {
 		}
 	}
 
+	public sealed class ValueRef {
+		public Value value;
+
+		public ValueRef(Value value) {
+			this.value = value;
+		}
+	}
+
 	public static class Interpreter {
 		public static Env CreateEnv() {
-			return new Env();
+			var env = new Env();
+			env.Add("pi",       new ValueRef(new Value(Math.PI)));
+			env.Add("e",        new ValueRef(new Value(Math.E)));
+
+			env.Add("clock",    new ValueRef(new Value(0, args => new Value((double)DateTime.Now.Ticks / 1000.0))));
+
+			env.Add("abs",      new ValueRef(new Value(1, args => new Value(Math.Abs(args[0].GetFloat())))));
+			env.Add("acos",     new ValueRef(new Value(1, args => new Value(Math.Acos(args[0].GetFloat())))));
+			env.Add("asin",     new ValueRef(new Value(1, args => new Value(Math.Asin(args[0].GetFloat())))));
+			env.Add("atan",     new ValueRef(new Value(1, args => new Value(Math.Atan(args[0].GetFloat())))));
+			env.Add("atan2",    new ValueRef(new Value(2, args => new Value(Math.Atan2(args[0].GetFloat(), args[1].GetFloat())))));
+			env.Add("ceiling",  new ValueRef(new Value(1, args => new Value(Math.Ceiling(args[0].GetFloat())))));
+			env.Add("cos",      new ValueRef(new Value(1, args => new Value(Math.Cos(args[0].GetFloat())))));
+			env.Add("cosh",     new ValueRef(new Value(1, args => new Value(Math.Cosh(args[0].GetFloat())))));
+			env.Add("exp",      new ValueRef(new Value(1, args => new Value(Math.Exp(args[0].GetFloat())))));
+			env.Add("floor",    new ValueRef(new Value(1, args => new Value(Math.Floor(args[0].GetFloat())))));
+			env.Add("ln",       new ValueRef(new Value(1, args => new Value(Math.Log(args[0].GetFloat())))));
+			env.Add("log",      new ValueRef(new Value(2, args => new Value(Math.Log(args[0].GetFloat(), args[1].GetFloat())))));
+			env.Add("log10",    new ValueRef(new Value(1, args => new Value(Math.Log10(args[0].GetFloat())))));
+			env.Add("max",      new ValueRef(new Value(2, args => new Value(Math.Max(args[0].GetFloat(), args[1].GetFloat())))));
+			env.Add("min",      new ValueRef(new Value(2, args => new Value(Math.Min(args[0].GetFloat(), args[1].GetFloat())))));
+			env.Add("pow",      new ValueRef(new Value(2, args => new Value(Math.Pow(args[0].GetFloat(), args[1].GetFloat())))));
+			env.Add("round",    new ValueRef(new Value(1, args => new Value(Math.Round(args[0].GetFloat())))));
+			env.Add("sign",     new ValueRef(new Value(1, args => new Value(Math.Sign(args[0].GetFloat())))));
+			env.Add("sin",      new ValueRef(new Value(1, args => new Value(Math.Sin(args[0].GetFloat())))));
+			env.Add("sinh",     new ValueRef(new Value(1, args => new Value(Math.Sinh(args[0].GetFloat())))));
+			env.Add("sqrt",     new ValueRef(new Value(1, args => new Value(Math.Sqrt(args[0].GetFloat())))));
+			env.Add("tan",      new ValueRef(new Value(1, args => new Value(Math.Tan(args[0].GetFloat())))));
+			env.Add("tanh",     new ValueRef(new Value(1, args => new Value(Math.Tanh(args[0].GetFloat())))));
+			env.Add("truncate", new ValueRef(new Value(1, args => new Value(Math.Truncate(args[0].GetFloat())))));
+			return env;
 		}
 
 		public static Env CopyEnv(Env env) {
@@ -164,18 +220,27 @@ namespace FuScript {
 				return new Value();
 			case Node.VarDecl:
 				var value = node.child1 == null ? new Value() : Eval(node.child1, env);
-				return env[node.stringLiteral] = value;
+				env[node.stringLiteral] = new ValueRef(value);
+				return value;
 			case Node.Variable:
 				if (!env.ContainsKey(node.stringLiteral)) throw new Exception("Variable never defined");
-				return env[node.stringLiteral];
+				return env[node.stringLiteral].value;
 			case Node.Assignment:
 				if (!env.ContainsKey(node.stringLiteral)) throw new Exception("Variable never defined");
-				return env[node.stringLiteral].Assign(Eval(node.child1, env));
+				return env[node.stringLiteral].value = Eval(node.child1, env);
 			case Node.Block:
 				env = CopyEnv(env);
 				length = node.children.Length;
 				for (int i = 0; i < length; i++) Eval(node.children[i], env);
 				return new Value();
+			case Node.Call:
+				var callee = Eval(node.child1, env);
+				if (callee.type != Value.Function) throw new Exception("Callee not callable");
+				if (callee.arity != node.children.Length) throw new Exception("Arguments count mismatch");
+				var args = new Value[callee.arity];
+				length = node.children.Length;
+				for (int i = 0; i < length; i++) args[i] = Eval(node.children[i], env);
+				return callee.function(args);
 			default:
 				throw new System.Exception("Code path not possible");
 			}
