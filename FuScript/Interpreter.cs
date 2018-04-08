@@ -1,29 +1,30 @@
 ﻿using System;
 using System.Collections.Generic;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.Value>;
 
 namespace FuScript {
-	public sealed class Value {
+	public struct Value {
 		public const byte Null = 0, True = 1, False = 2, Number = 3, String = 4;
 
 		public byte type;
 		public float numberValue;
 		public string stringValue;
 
-		public Value() {
-			type = Null;
-		}
-
 		public Value(bool boolean) {
 			type = boolean ? True : False;
+			numberValue = 0;
+			stringValue = null;
 		}
 
 		public Value(float number) {
 			type = Number;
 			numberValue = number;
+			stringValue = null;
 		}
 
 		public Value(string str) {
 			type = String;
+			numberValue = 0;
 			stringValue = str;
 		}
 		
@@ -50,7 +51,7 @@ namespace FuScript {
 
 		public string GetString() {
 			if (type == String) return stringValue;
-			if (type == Null) return "";
+			if (type == Null)   return "";
 			if (type == Number) return numberValue.ToString();
 			return type == True ? "true" : "false";
 		}
@@ -69,13 +70,19 @@ namespace FuScript {
 	}
 
 	public static class Interpreter {
-		static readonly Dictionary<string, Value> env = new Dictionary<string, Value>();
+		public static Env CreateEnv() {
+			return new Env();
+		}
 
-		public static Value Eval(Node node) {
+		public static Env CopyEnv(Env env) {
+			return new Env(env);
+		}
+
+		public static Value Eval(Node node, Env env) {
 			switch (node.type) {
 			case Node.BinaryOp:
-				var left = Eval(node.child1);
-				var right = Eval(node.child2);
+				var left = Eval(node.child1, env);
+				var right = Eval(node.child2, env);
 
 				switch (node.token) {
 				case Token.Minus:       return new Value(left.GetFloat() - right.GetFloat());
@@ -101,7 +108,7 @@ namespace FuScript {
 					throw new System.Exception("Code path not possible");
 				}
 			case Node.UnaryOp:
-				var one = Eval(node.child1);
+				var one = Eval(node.child1, env);
 
 				switch (node.token) {
 				case Token.Minus:       return new Value(-one.GetFloat());
@@ -122,14 +129,19 @@ namespace FuScript {
 				}
 			case Node.Statement:
 				switch (node.token) {
-				case Token.KPrint:      Console.WriteLine(Eval(node.child1)); return new Value();
+				case Token.KPrint:      Console.WriteLine(Eval(node.child1, env)); return new Value();
 				default:
 					throw new System.Exception("Code path not possible");
 				}
 			case Node.Program:
 				int length = node.children.Length;
-				for (int i = 0; i < length; i++) Eval(node.children[i]);
+				for (int i = 0; i < length; i++) Eval(node.children[i], env);
 				return new Value();
+			case Node.VarDecl:
+				var value = node.child1 == null ? new Value() : Eval(node.child1, env);
+				return env[node.stringLiteral] = value;
+			case Node.Variable:
+				return env[node.stringLiteral];
 			default:
 				throw new System.Exception("Code path not possible");
 			}

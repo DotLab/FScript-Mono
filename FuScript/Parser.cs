@@ -4,6 +4,7 @@ using System.Collections.Generic;
 namespace FuScript {
 	public sealed class Node {
 		public const byte BinaryOp = 0, UnaryOp = 1, Literal = 2, Statement = 3, Program = 4;
+		public const byte VarDecl = 5, Variable = 6;
 
 		public readonly byte type, token;
 		public readonly Node child1, child2, child3;
@@ -62,6 +63,11 @@ namespace FuScript {
 			this.child1 = child1;
 		}
 
+		public Node(byte type, string stringLiteral) {
+			this.type = type;
+			this.stringLiteral = stringLiteral;
+		}
+
 		public override string ToString() {
 			switch (type) {
 			case Node.BinaryOp:
@@ -105,15 +111,19 @@ namespace FuScript {
 				}
 			case Node.Statement:
 				switch (token) {
-				case Token.KPrint:      return "print " + child1 + ";";
+				case Token.KPrint:      return "print " + child1;
 				default:
 					throw new System.Exception("Code path not possible");
 				}
 			case Node.Program:
 				int length = children.Length;
-				string s = "";
-				for (int i = 0; i < length; i++) s += children[i];
-				return s;
+				var sb = new System.Text.StringBuilder();
+				for (int i = 0; i < length; i++) sb.Append(children[i] + "; ");
+				return sb.ToString();
+			case Node.VarDecl:
+				return child1 == null ? "var " + stringLiteral : "var " + stringLiteral + " = " + child1;
+			case Node.Variable:
+				return stringLiteral;
 			default:
 				throw new System.Exception("Code path not possible");
 			}
@@ -287,7 +297,7 @@ namespace FuScript {
 		}
 
 		/**
-		 * primary -> NUMBER | STRING | FALSE | TRUE | NULL
+		 * primary -> NUMBER | STRING | "false" | "true" | "null" | IDENTIFIER
 		 *          | "(" expression ")"
 		 */
 		static Node Primary() {
@@ -296,6 +306,8 @@ namespace FuScript {
 
 			if (Peek(Token.KFalse, Token.KTrue)) return MkLiteral(_tokens[_pos++].type);
 			if (Match(Token.KNull)) return MkLiteral(Token.KNull);
+
+			if (Peek(Token.Id)) return new Node(Node.Variable, _tokens[_pos++].stringLiteral);
 
 			Eat(Token.LParen);
 			var expr = Expression();
@@ -332,11 +344,11 @@ namespace FuScript {
 		}
 
 		static Node MkDeclaration(byte token, string id) {
-			return new Node(Node.Program, token, id);
+			return new Node(Node.VarDecl, token, id);
 		}
 
 		static Node MkDeclaration(byte token, string id, Node expr) {
-			return new Node(Node.Program, token, id, expr);
+			return new Node(Node.VarDecl, token, id, expr);
 		}
 	}
 }
