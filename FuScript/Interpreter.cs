@@ -3,6 +3,14 @@ using System.Collections.Generic;
 using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
 
 namespace FuScript {
+	public sealed class Return : Exception {
+		public Value value;
+
+		public Return(Value val) {
+			value = val;
+		}
+	}
+
 	public delegate Value Func(Value[] values);
 
 	public struct Value {
@@ -247,10 +255,18 @@ namespace FuScript {
 				var closure = CopyEnv(env);
 				var func = new Value((byte)length, arg => {
 					for (int i = 0; i < length; i++) closure[node.children[i].stringLiteral] = new ValueRef(arg[i]);
-					return Eval(node.child1, closure);
+					try {
+						Eval(node.child1, closure);
+					} catch(Return ret) {
+						return ret.value;
+					}
+					return new Value();
 				});
 				env[node.stringLiteral] = new ValueRef(func);
 				return func;
+			case Node.Return:
+				if (node.child1 != null) throw new Return(Eval(node.child1, env));
+				throw new Return(new Value());
 			default:
 				throw new System.Exception("Code path not possible");
 			}
