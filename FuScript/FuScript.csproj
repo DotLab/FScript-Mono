@@ -44,8 +44,8 @@
     <Compile Include="VirtualMachine.cs" />
     <Compile Include="Lexer.cs" />
     <Compile Include="Compiler.cs" />
-    <Compile Include="Inst.cs" />
     <Compile Include="Value.cs" />
+    <Compile Include="Opcode.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

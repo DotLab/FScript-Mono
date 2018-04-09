@@ -23,26 +23,26 @@ namespace FuScript {
 			while (pc < length) {
 				p = pc;
 				switch (inst = Compiler.insts[pc++]) {
-				case Inst.BinarySubtract: dsp -= 1; dataStack[dsp].num -= dataStack[dsp + 1].num; break;
-				case Inst.BinaryAdd:      dsp -= 1; dataStack[dsp].num += dataStack[dsp + 1].num; break;
-				case Inst.BinaryDivide:   dsp -= 1; dataStack[dsp].num /= dataStack[dsp + 1].num; break;
-				case Inst.BinaryMultiply: dsp -= 1; dataStack[dsp].num *= dataStack[dsp + 1].num; break;
+				case Opcode.BinarySubtract: dsp -= 1; dataStack[dsp].num -= dataStack[dsp + 1].num; break;
+				case Opcode.BinaryAdd:      dsp -= 1; dataStack[dsp].num += dataStack[dsp + 1].num; break;
+				case Opcode.BinaryDivide:   dsp -= 1; dataStack[dsp].num /= dataStack[dsp + 1].num; break;
+				case Opcode.BinaryMultiply: dsp -= 1; dataStack[dsp].num *= dataStack[dsp + 1].num; break;
 
-				case Inst.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].type); break;
-				case Inst.UnaryNegative:  dataStack[dsp] = new Value(-dataStack[dsp].num); break;
+				case Opcode.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].type); break;
+				case Opcode.UnaryNegative:  dataStack[dsp] = new Value(-dataStack[dsp].num); break;
 
-				case Inst.PushConst:      dataStack[++dsp] = new Value(Compiler.numbers[Compiler.insts[pc++]]); break;
+				case Opcode.PushConst:      dataStack[++dsp] = new Value(Compiler.numbers[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]); break;
 					
-				case Inst.PushVar:        dataStack[++dsp] = env[Compiler.strings[Compiler.insts[pc++]]].value; break;
-				case Inst.PopVar:         env[Compiler.strings[Compiler.insts[pc++]]].value = dataStack[dsp--]; break;
-				case Inst.PopNewVar:      env[Compiler.strings[Compiler.insts[pc++]]] = new ValueRef(dataStack[dsp--]); break;
+				case Opcode.PushVar:        dataStack[++dsp] = env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]].value; break;
+				case Opcode.PopVar:         env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]].value = dataStack[dsp--]; break;
+				case Opcode.PopNewVar:      env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]] = new ValueRef(dataStack[dsp--]); break;
 					
-				case Inst.CloneEnv:       envStack[++esp] = new Env(env); break;
-				case Inst.RestoreEnv:     env = envStack[esp--]; break;
+				case Opcode.CloneEnv:       envStack[++esp] = new Env(env); break;
+				case Opcode.RestoreEnv:     env = envStack[esp--]; break;
 					
-				case Inst.Print:          System.Console.WriteLine(dataStack[dsp--]); break;
+				case Opcode.Print:          System.Console.WriteLine(dataStack[dsp--]); break;
 
-				case Inst.PushConstNull:  dataStack[++dsp].type = Value.Null; break;
+				case Opcode.PushConstNull:  dataStack[++dsp].type = Value.Null; break;
 					
 				default:
 					throw new System.Exception("Unrecognized instruction " + Compiler.insts[pc - 1]);

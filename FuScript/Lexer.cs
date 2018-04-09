@@ -68,25 +68,27 @@
 
 		public static readonly string[] strings = new string[256];
 		public static readonly double[] numbers = new double[256];
-		public static byte scount, ncount;
+		public static ushort scount, ncount;
 
-		public static readonly byte[] tokens = new byte[32767];
-		public static int tcount;
+		public static readonly byte[] tokens = new byte[1024];
+		public static ushort tcount;
 
-		static void Add(byte type) {
-			tokens[tcount++] = type;
+		static void Add(byte t) {
+			tokens[tcount++] = t;
 		}
 
-		static void Add(byte type, string str) {
-			tokens[tcount++] = type;
-			tokens[tcount++] = scount;
-			strings[scount++] = str;
+		static void Add(byte t, string s) {
+			tokens[tcount++] = t;
+			tokens[tcount++] = (byte)(scount & 0xff);
+			tokens[tcount++] = (byte)(scount >> 8);
+			strings[scount++] = s;
 		}
 
-		static void Add(byte type, double num) {
-			tokens[tcount++] = type;
-			tokens[tcount++] = ncount;
-			numbers[ncount++] = num;
+		static void Add(byte t, double n) {
+			tokens[tcount++] = t;
+			tokens[tcount++] = (byte)(ncount & 0xff);
+			tokens[tcount++] = (byte)(ncount >> 8);
+			numbers[ncount++] = n;
 		}
 
 		static bool Match(char c) {
@@ -215,9 +217,9 @@
 				case Token.OrEqual:     sb.Append("|="); break;
 				case Token.OrOr:        sb.Append("||"); break;
 
-				case Token.Id:          sb.Append(strings[tokens[i++]]); break;
-				case Token.String:      sb.Append("'"); sb.Append(strings[tokens[i++]]); sb.Append("'"); break;
-				case Token.Number:      sb.Append(numbers[tokens[i++]]); break;
+				case Token.Id:          sb.Append(strings[tokens[i++] | tokens[i++] << 8]); break;
+				case Token.String:      sb.Append("'"); sb.Append(strings[tokens[i++] | tokens[i++] << 8]); sb.Append("'"); break;
+				case Token.Number:      sb.Append(numbers[tokens[i++] | tokens[i++] << 8]); break;
 
 				case Token.True:        sb.Append("true"); break;
 				case Token.False:       sb.Append("false"); break;
