@@ -65,14 +65,14 @@ namespace FuScript {
 					dataStack[dsp].sys2 = n;
 					break;
 				case Opcode.CallFunction:  // (CF n)
-					if (dataStack[dsp].type != Value.Function) throw new System.Exception("Value not callable");
+					n = EatOperand();
 
-					ic = dataStack[dsp].sys1;
-					n = dataStack[dsp--].sys2;
-					if (EatOperand() != n) throw new System.Exception("Function argument count mismatch");
+					if (dataStack[dsp - n].type != Value.Function) throw new System.Exception("Value not callable ");
+					ic = dataStack[dsp - n].sys1;
+					if (dataStack[dsp - n].sys2 != n) throw new System.Exception("Function argument count mismatch");
 
-					dataStack[++dsp].type = Value.Number;
-					dataStack[dsp].sys1 = pc;  // Return addr
+					dataStack[dsp - n].type = Value.Number;
+					dataStack[dsp - n].sys1 = pc;  // Return addr
 					pc = ic;
 					break;
 				case Opcode.Return:  // ret val
