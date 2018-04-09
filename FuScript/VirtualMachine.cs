@@ -1,4 +1,5 @@
-﻿using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
+﻿using Math = System.Math;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
 
 namespace FuScript {
 	public static class VirtualMachine {
@@ -17,6 +18,36 @@ namespace FuScript {
 
 		static Env env = new Env();
 
+		static VirtualMachine() {
+			env.Add("pi", new ValueRef(new Value(Math.PI)));
+//			env.Add("e", new ValueRef(new Value(Math.E)));
+
+			env.Add("abs",      new ValueRef(new Value(1, args => new Value(Math.Abs(args[0].num)))));
+//			env.Add("acos",     new ValueRef(new Value(1, args => new Value(Math.Acos(args[0].num)))));
+//			env.Add("asin",     new ValueRef(new Value(1, args => new Value(Math.Asin(args[0].num)))));
+//			env.Add("atan",     new ValueRef(new Value(1, args => new Value(Math.Atan(args[0].num)))));
+//			env.Add("atan2",    new ValueRef(new Value(2, args => new Value(Math.Atan2(args[0].num, args[1].num)))));
+//			env.Add("ceiling",  new ValueRef(new Value(1, args => new Value(Math.Ceiling(args[0].num)))));
+//			env.Add("cos",      new ValueRef(new Value(1, args => new Value(Math.Cos(args[0].num)))));
+//			env.Add("cosh",     new ValueRef(new Value(1, args => new Value(Math.Cosh(args[0].num)))));
+//			env.Add("exp",      new ValueRef(new Value(1, args => new Value(Math.Exp(args[0].num)))));
+//			env.Add("floor",    new ValueRef(new Value(1, args => new Value(Math.Floor(args[0].num)))));
+//			env.Add("ln",       new ValueRef(new Value(1, args => new Value(Math.Log(args[0].num)))));
+//			env.Add("log",      new ValueRef(new Value(2, args => new Value(Math.Log(args[0].num, args[1].num)))));
+//			env.Add("log10",    new ValueRef(new Value(1, args => new Value(Math.Log10(args[0].num)))));
+//			env.Add("max",      new ValueRef(new Value(2, args => new Value(Math.Max(args[0].num, args[1].num)))));
+//			env.Add("min",      new ValueRef(new Value(2, args => new Value(Math.Min(args[0].num, args[1].num)))));
+//			env.Add("pow",      new ValueRef(new Value(2, args => new Value(Math.Pow(args[0].num, args[1].num)))));
+//			env.Add("round",    new ValueRef(new Value(1, args => new Value(Math.Round(args[0].num)))));
+//			env.Add("sign",     new ValueRef(new Value(1, args => new Value(Math.Sign(args[0].num)))));
+//			env.Add("sin",      new ValueRef(new Value(1, args => new Value(Math.Sin(args[0].num)))));
+//			env.Add("sinh",     new ValueRef(new Value(1, args => new Value(Math.Sinh(args[0].num)))));
+//			env.Add("sqrt",     new ValueRef(new Value(1, args => new Value(Math.Sqrt(args[0].num)))));
+//			env.Add("tan",      new ValueRef(new Value(1, args => new Value(Math.Tan(args[0].num)))));
+//			env.Add("tanh",     new ValueRef(new Value(1, args => new Value(Math.Tanh(args[0].num)))));
+//			env.Add("truncate", new ValueRef(new Value(1, args => new Value(Math.Truncate(args[0].num)))));
+		}
+
 		static ushort EatOperand() {
 			return (ushort)(Compiler.insts[pc++] | Compiler.insts[pc++] << 8);
 		}
@@ -24,7 +55,7 @@ namespace FuScript {
 		public static void Run() {
 			int lastPc;
 			ushort ic, n;
-//			var list = new System.Collections.Generic.List<string>();
+			Value[] args = null;
 //			string[] strarr;
 			while (pc < length) {
 				lastPc = pc;
@@ -71,16 +102,22 @@ namespace FuScript {
 				case Opcode.CallFunction:  // (CF n)
 					n = EatOperand();
 
-					if (dataStack[dsp - n].type != Value.Function) throw new System.Exception("Value not callable ");
+					if (dataStack[dsp - n].type != Value.Function && dataStack[dsp - n].type != Value.Interop) throw new System.Exception("Value not callable ");
 					if (dataStack[dsp - n].sys1 != n) throw new System.Exception("Function argument count mismatch");
 
-					ic = dataStack[dsp - n].sys2;
+					if (dataStack[dsp - n].type == Value.Function) {
+						ic = dataStack[dsp - n].sys2;
 
-					envStack[++esp] = env;  // Non copy
-					env = (Env)dataStack[dsp - n].obj;  // Load closure
+						envStack[++esp] = env;  // Non copy
+						env = (Env)dataStack[dsp - n].obj;  // Load closure
 
-					dataStack[dsp - n].Set(pc);
-					pc = ic;
+						dataStack[dsp - n].Set(pc);
+						pc = ic;
+					} else {
+						args = new Value[n];
+						for (int i = n - 1; i >= 0; --i) args[i] = dataStack[dsp--];
+						dataStack[dsp] = ((InteropFunction)dataStack[dsp].obj)(args);
+					}
 					break;
 				case Opcode.Return:  // ret val
 					ic = dataStack[--dsp].sys2;  // Return addr
