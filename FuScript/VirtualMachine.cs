@@ -23,7 +23,7 @@ namespace FuScript {
 
 		public static void Run() {
 			int lastPc;
-			ushort ic, n, n2;
+			ushort ic, n;
 //			var list = new System.Collections.Generic.List<string>();
 //			string[] strarr;
 			while (pc < length) {
@@ -45,8 +45,10 @@ namespace FuScript {
 					
 				case Opcode.PushVar:        dataStack[++dsp] = env[Compiler.strings[EatOperand()]].value; break;
 				case Opcode.PopVar:         env[Compiler.strings[EatOperand()]].value = dataStack[dsp--]; break;
+				case Opcode.PeekVar:        env[Compiler.strings[EatOperand()]].value = dataStack[dsp]; break;
 				case Opcode.PopNewVar:      env[Compiler.strings[EatOperand()]] = new ValueRef(dataStack[dsp--]); break;
-					
+				case Opcode.PopDiscard:     dsp--; break;
+
 				case Opcode.CloneEnv:       envStack[++esp] = new Env(env); break;
 				case Opcode.RestoreEnv:     env = envStack[esp--]; break;
 					
@@ -84,7 +86,7 @@ namespace FuScript {
 					throw new System.Exception("Unrecognized instruction " + Compiler.insts[pc - 1]);
 				}
 
-				System.Console.Write(string.Format("{0,3} [ ", Compiler.marks[lastPc]));
+				System.Console.Write(string.Format("{0,5} {1,3} [ ", lastPc, Compiler.marks[lastPc]));
 				for (int i = 0; i <= dsp; i++) System.Console.Write(dataStack[i] + ", ");
 				System.Console.Write("]\n\t{0,3} {{ ", esp);
 				foreach (var pair in env) System.Console.Write(pair.Key + ": " + pair.Value + ", ");
