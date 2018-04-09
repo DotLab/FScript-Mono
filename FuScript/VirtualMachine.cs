@@ -33,18 +33,18 @@ namespace FuScript {
 				case Opcode.BinaryDivide:   dsp -= 1; dataStack[dsp].num /= dataStack[dsp + 1].num; break;
 				case Opcode.BinaryMultiply: dsp -= 1; dataStack[dsp].num *= dataStack[dsp + 1].num; break;
 				case Opcode.BinaryAdd:      dsp -= 1; 
-					if (dataStack[dsp].type == Value.String) dataStack[dsp] = new Value((string)dataStack[dsp].obj + dataStack[dsp + 1].AsString()); 
+					if (dataStack[dsp].type == Value.String) dataStack[dsp].Set((string)dataStack[dsp].obj + dataStack[dsp + 1].AsString()); 
 					else dataStack[dsp].num += dataStack[dsp + 1].num; 
 					break;
 
-				case Opcode.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].IsFalsy()); break;
-				case Opcode.UnaryNegative:  dataStack[dsp] = new Value(-dataStack[dsp].num); break;
+				case Opcode.UnaryNot:       dataStack[dsp].Set(dataStack[dsp].IsFalsy()); break;
+				case Opcode.UnaryNegative:  dataStack[dsp].Set(-dataStack[dsp].num); break;
 
-				case Opcode.PushSmallInt:   dataStack[++dsp] = new Value(EatOperand()); break;
+				case Opcode.PushSmallInt:   dataStack[++dsp].Set(EatOperand()); break;
 				case Opcode.Jump:           pc = EatOperand(); break;
 					
-				case Opcode.PushNumber:     dataStack[++dsp] = new Value(Compiler.numbers[EatOperand()]); break;
-				case Opcode.PushString:     dataStack[++dsp] = new Value(Compiler.strings[EatOperand()]); break;
+				case Opcode.PushNumber:     dataStack[++dsp].Set(Compiler.numbers[EatOperand()]); break;
+				case Opcode.PushString:     dataStack[++dsp].Set(Compiler.strings[EatOperand()]); break;
 					
 				case Opcode.PushVar:        dataStack[++dsp] = env[Compiler.strings[EatOperand()]].value; break;
 				case Opcode.PopVar:         env[Compiler.strings[EatOperand()]].value = dataStack[dsp--]; break;
@@ -63,28 +63,29 @@ namespace FuScript {
 
 				case Opcode.BranchIfFalsy:  if (dataStack[dsp--].IsFalsy()) pc = EatOperand(); else EatOperand(); break;
 					
-				case Opcode.MakeFunction:  // n (MF ic)
-					ic = EatOperand();
-					n = dataStack[dsp--].sys1;
-
-					dataStack[++dsp].type = Value.Function;
-					dataStack[dsp].sys1 = ic;
-					dataStack[dsp].sys2 = n;
+				case Opcode.MakeFunction:  // ic (MF n)
+					n = EatOperand();
+					ic = dataStack[dsp].sys1;
+					dataStack[dsp].Set(n, ic, new Env(env));
 					break;
 				case Opcode.CallFunction:  // (CF n)
 					n = EatOperand();
 
 					if (dataStack[dsp - n].type != Value.Function) throw new System.Exception("Value not callable ");
-					ic = dataStack[dsp - n].sys1;
-					if (dataStack[dsp - n].sys2 != n) throw new System.Exception("Function argument count mismatch");
+					if (dataStack[dsp - n].sys1 != n) throw new System.Exception("Function argument count mismatch");
 
-					dataStack[dsp - n].type = Value.Number;
-					dataStack[dsp - n].sys1 = pc;  // Return addr
+					ic = dataStack[dsp - n].sys2;
+
+					envStack[++esp] = env;  // Non copy
+					env = (Env)dataStack[dsp - n].obj;  // Load closure
+
+					dataStack[dsp - n].Set(pc);
 					pc = ic;
 					break;
 				case Opcode.Return:  // ret val
-					ic = dataStack[--dsp].sys1;  // Return addr
+					ic = dataStack[--dsp].sys2;  // Return addr
 					dataStack[dsp] = dataStack[dsp + 1];  // Copy val
+					env = envStack[esp--];  // Restore env
 
 					pc = ic;
 					break;
@@ -95,7 +96,7 @@ namespace FuScript {
 
 				System.Console.Write(string.Format("{0,5} {1,3} [ ", lastPc, Compiler.marks[lastPc]));
 				for (int i = 0; i <= dsp; i++) System.Console.Write(dataStack[i] + ", ");
-				System.Console.Write("]\n\t{0,3} {{ ", esp);
+				System.Console.Write("]\n{0,9} {{ ", esp);
 				foreach (var pair in env) System.Console.Write(pair.Key + ": " + pair.Value + ", ");
 				System.Console.WriteLine("}");
 			}
