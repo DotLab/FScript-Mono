@@ -105,8 +105,8 @@
 		}
 
 		public static void Scan(string text) {
-			Lexer.text = text; length = text.Length;
-			pos = 0; scount = 0; ncount = 0; tcount = 0;
+			Lexer.text = text; length = text.Length; pos = 0; 
+//			scount = 0; ncount = 0; tcount = 0;
 
 			while (pos < length) {
 				char c = text[pos++];
@@ -145,7 +145,7 @@
 				}
 			}
 
-			if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
+//			if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
 		}
 
 		static void Number() {
