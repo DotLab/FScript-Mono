@@ -2,7 +2,7 @@
 
 namespace FuScript {
 	public static class VirtualMachine {
-		static int pc, length;
+		static ushort pc, length;
 
 		static readonly Value[] dataStack = new Value[512];
 		static int dsp = -1;
@@ -17,11 +17,15 @@ namespace FuScript {
 
 		static Env env = new Env();
 
+		static ushort EatOperand() {
+			return (ushort)(Compiler.insts[pc++] | Compiler.insts[pc++] << 8);
+		}
+
 		public static void Run() {
 			int lastPc;
-			ushort ic, n;
-			var list = new System.Collections.Generic.List<string>();
-			string[] strarr;
+			ushort ic, n, n2;
+//			var list = new System.Collections.Generic.List<string>();
+//			string[] strarr;
 			while (pc < length) {
 				lastPc = pc;
 				switch (Compiler.insts[pc++]) {
@@ -33,15 +37,15 @@ namespace FuScript {
 				case Opcode.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].type); break;
 				case Opcode.UnaryNegative:  dataStack[dsp] = new Value(-dataStack[dsp].num); break;
 
-				case Opcode.PushSmallInt:   dataStack[++dsp] = new Value(Compiler.insts[pc++] | Compiler.insts[pc++] << 8); break;
-				case Opcode.Jump:           pc = Compiler.insts[pc++] | Compiler.insts[pc++] << 8; break;
+				case Opcode.PushSmallInt:   dataStack[++dsp] = new Value(EatOperand()); break;
+				case Opcode.Jump:           pc = EatOperand(); break;
 					
-				case Opcode.PushNumber:     dataStack[++dsp] = new Value(Compiler.numbers[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]); break;
-				case Opcode.PushString:     dataStack[++dsp] = new Value(Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]); break;
+				case Opcode.PushNumber:     dataStack[++dsp] = new Value(Compiler.numbers[EatOperand()]); break;
+				case Opcode.PushString:     dataStack[++dsp] = new Value(Compiler.strings[EatOperand()]); break;
 					
-				case Opcode.PushVar:        dataStack[++dsp] = env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]].value; break;
-				case Opcode.PopVar:         env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]].value = dataStack[dsp--]; break;
-				case Opcode.PopNewVar:      env[Compiler.strings[Compiler.insts[pc++] | Compiler.insts[pc++] << 8]] = new ValueRef(dataStack[dsp--]); break;
+				case Opcode.PushVar:        dataStack[++dsp] = env[Compiler.strings[EatOperand()]].value; break;
+				case Opcode.PopVar:         env[Compiler.strings[EatOperand()]].value = dataStack[dsp--]; break;
+				case Opcode.PopNewVar:      env[Compiler.strings[EatOperand()]] = new ValueRef(dataStack[dsp--]); break;
 					
 				case Opcode.CloneEnv:       envStack[++esp] = new Env(env); break;
 				case Opcode.RestoreEnv:     env = envStack[esp--]; break;
@@ -50,16 +54,32 @@ namespace FuScript {
 
 				case Opcode.PushConstNull:  dataStack[++dsp].type = Value.Null; break;
 
-				case Opcode.MakeFunction:  // fname arg1 arg2 ... argn n ic
-					ic = (ushort)dataStack[dsp--].num;
-					n = (ushort)dataStack[dsp--].num;
-					strarr = new string[n];
-					for (int i = n - 1; i >= 0; --i) strarr[i] = (string)dataStack[dsp--].obj;
+				case Opcode.MakeFunction:  // n (MF ic)
+					ic = EatOperand();
+					n = dataStack[dsp--].sys1;
+
 					dataStack[++dsp].type = Value.Function;
-					dataStack[dsp].num = ic;
-					dataStack[dsp].obj = strarr;
+					dataStack[dsp].sys1 = ic;
+					dataStack[dsp].sys2 = n;
 					break;
-					
+				case Opcode.CallFunction:  // (CF n)
+					if (dataStack[dsp].type != Value.Function) throw new System.Exception("Value not callable");
+
+					ic = dataStack[dsp].sys1;
+					n = dataStack[dsp--].sys2;
+					if (EatOperand() != n) throw new System.Exception("Function argument count mismatch");
+
+					dataStack[++dsp].type = Value.Number;
+					dataStack[dsp].sys1 = pc;  // Return addr
+					pc = ic;
+					break;
+				case Opcode.Return:  // ret val
+					ic = dataStack[--dsp].sys1;  // Return addr
+					dataStack[dsp] = dataStack[dsp + 1];  // Copy val
+
+					pc = ic;
+					break;
+
 				default:
 					throw new System.Exception("Unrecognized instruction " + Compiler.insts[pc - 1]);
 				}

@@ -12,8 +12,8 @@
 		public const byte PushConstNull = 14, PushConstFalse = 15, PushConstTrue = 16;
 
 		public const byte Jump = 18, Return = 19;
-		public const byte MakeFunction = 22;
-		// 22
+		public const byte MakeFunction = 22, CallFunction = 23;
+		// 23
 	}
 }
 
