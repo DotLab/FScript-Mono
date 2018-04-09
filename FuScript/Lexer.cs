@@ -58,6 +58,7 @@
 			keywords.Add("break",    Token.Break);
 			keywords.Add("continue", Token.Continue);
 			keywords.Add("var",      Token.Var);
+			keywords.Add("func", Token.Function);
 			keywords.Add("function", Token.Function);
 			keywords.Add("print",    Token.Print);
 			keywords.Add("eof",      Token.Eof);
