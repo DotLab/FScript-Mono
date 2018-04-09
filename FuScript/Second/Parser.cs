@@ -385,8 +385,8 @@ namespace FuScript.Second {
 		}
 
 		/**
-		* printStmt -> "print" expression ";"
-		*/
+		 * printStmt -> "print" expression ";"
+		 */
 		static Node PrintStmt() {
 			Eat(Token.KPrint);
 			var node = new Node(Node.Statement, Token.KPrint, Expression());
