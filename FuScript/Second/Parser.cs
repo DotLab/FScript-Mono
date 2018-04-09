@@ -476,7 +476,7 @@ namespace FuScript.Second {
 		}
 
 		/**
-		 * addition -> bitwise (("-" | "+") bitwise)*
+		 * addition -> multiplication (("-" | "+") multiplication)*
 		 */
 		static Node Addition() {
 			var expr = Multiplication();

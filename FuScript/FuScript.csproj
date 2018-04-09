@@ -42,8 +42,9 @@
     <Compile Include="Second\Lexer.cs" />
     <Compile Include="Second\Parser.cs" />
     <Compile Include="VirtualMachine.cs" />
-    <Compile Include="ByteCode.cs" />
     <Compile Include="Lexer.cs" />
+    <Compile Include="Compiler.cs" />
+    <Compile Include="Inst.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

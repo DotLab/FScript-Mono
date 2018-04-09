@@ -66,12 +66,12 @@
 		static string text;
 		static int pos, length;
 
-		static string[] strings = new string[256];
-		static double[] numbers = new double[256];
-		static byte scount, ncount;
+		public static readonly string[] strings = new string[256];
+		public static readonly double[] numbers = new double[256];
+		public static byte scount, ncount;
 
-		static byte[] tokens = new byte[32767];
-		static int tcount;
+		public static readonly byte[] tokens = new byte[32767];
+		public static int tcount;
 
 		static void Add(byte type) {
 			tokens[tcount++] = type;
@@ -236,12 +236,13 @@
 				case Token.Eof:         sb.Append("eof"); break;
 					
 				default:
-					throw new UnrecognizedTokenException(tokens[i]);
+					throw new UnrecognizedTokenException(tokens[i - 1]);
 				}
 
 				sb.Append(" ");
 			}
 
+			sb.Append("\n");
 			return sb.ToString();
 		}
 	}

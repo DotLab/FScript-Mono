@@ -1,29 +1,36 @@
 ﻿namespace FuScript {
 	public static class VirtualMachine {
-		static byte[] inst;
 		static int pc, length;
 
-		static byte b1, b2, b3;
-		static double f1, f2, f3;
-		static int i1, i2, i3;
+		static readonly double[] stack = new double[512];
+		static int sp;
 
-		static readonly double[] fdata = new double[1000];
-
-		public static void Init(byte[] bytecodes) {
-			inst = bytecodes;
-			length = bytecodes.Length;
-			pc = 0;
+		public static void Init() {
+			length = Compiler.icount;
+			pc = 0; sp = -1;
 		}
 
 		public static void Run() {
+			byte inst;
 			while (pc < length) {
-				switch (inst[pc]) {
-				case ByteCode.MoveConstToReg:  // move 1, f0
-					fdata[inst[pc + 2]] = inst[pc + 1];
-					pc += 3; break;
+				switch (inst = Compiler.insts[pc++]) {
+				case Inst.BinarySubtract: sp -= 1; stack[sp] -= stack[sp + 1]; break;
+				case Inst.BinaryAdd:      sp -= 1; stack[sp] += stack[sp + 1]; break;
+				case Inst.BinaryDivide:   sp -= 1; stack[sp] /= stack[sp + 1]; break;
+				case Inst.BinaryMultiply: sp -= 1; stack[sp] *= stack[sp + 1]; break;
+
+				case Inst.UnaryNot:       stack[sp] = -stack[sp]; break;
+				case Inst.UnaryNegative:  stack[sp] = -stack[sp]; break;
+
+				case Inst.PushConst:      stack[++sp] = Compiler.numbers[Compiler.insts[pc++]]; break;
+					
 				default:
-					throw new System.Exception("Unknow ByteCode " + inst[pc]);
+					throw new System.Exception("Unrecognized instruction " + Compiler.insts[pc - 1]);
 				}
+
+				System.Console.Write(string.Format("{0,3}: ", inst));
+				for (int i = 0; i <= sp; i++) System.Console.Write(stack[i] + " ");
+				System.Console.WriteLine();
 			}
 		}
 	}
