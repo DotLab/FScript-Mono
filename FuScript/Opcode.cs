@@ -1,6 +1,9 @@
 ﻿namespace FuScript {
 	public static class Opcode {
 		public const byte BinarySubtract = 2, BinaryAdd = 3, BinaryDivide = 4, BinaryMultiply = 5;
+		public const byte BinaryLogicOr = 27, BinaryLogicAnd = 28, BinaryEqual = 29, BinaryNotEqual = 30;
+		public const byte BinaryLess = 31, BinaryLessEqual = 32, BinaryGreater = 33, BinaryGreaterEqual = 34;
+
 		public const byte UnaryNot = 6, UnaryNegative = 7;
 
 		public const byte PushNumber = 8, PushString = 20, PushSmallInt = 21;
@@ -15,7 +18,9 @@
 		public const byte MakeFunction = 22, CallFunction = 23;
 
 		public const byte BranchIfFalsy = 26;
-		// 26
+
+		public const byte ObjectMemberGet = 35, ObjectMemberSet = 36, ObjectMemberDoSet = 37;
+		// 37
 	}
 }
 

@@ -19,10 +19,10 @@ namespace FuScript {
 		static Env env = new Env();
 
 		static VirtualMachine() {
-			env.Add("pi", new ValueRef(new Value(Math.PI)));
+//			env.Add("pi", new ValueRef(new Value(Math.PI)));
 //			env.Add("e", new ValueRef(new Value(Math.E)));
 
-			env.Add("abs",      new ValueRef(new Value(1, args => new Value(Math.Abs(args[0].num)))));
+//			env.Add("abs",      new ValueRef(new Value(1, args => new Value(Math.Abs(args[0].num)))));
 //			env.Add("acos",     new ValueRef(new Value(1, args => new Value(Math.Acos(args[0].num)))));
 //			env.Add("asin",     new ValueRef(new Value(1, args => new Value(Math.Asin(args[0].num)))));
 //			env.Add("atan",     new ValueRef(new Value(1, args => new Value(Math.Atan(args[0].num)))));
@@ -68,8 +68,23 @@ namespace FuScript {
 					else dataStack[dsp].num += dataStack[dsp + 1].num; 
 					break;
 
+				case Opcode.BinaryLogicOr:        dsp -= 1; if ( dataStack[dsp].IsFalsy()) dataStack[dsp] = dataStack[dsp + 1]; break;
+				case Opcode.BinaryLogicAnd:       dsp -= 1; if (!dataStack[dsp].IsFalsy()) dataStack[dsp] = dataStack[dsp + 1]; break;
+	
+				case Opcode.BinaryLess:           dsp -= 1; dataStack[dsp].Set(dataStack[dsp].num <  dataStack[dsp + 1].num); break;
+				case Opcode.BinaryLessEqual:      dsp -= 1; dataStack[dsp].Set(dataStack[dsp].num <= dataStack[dsp + 1].num); break;
+				case Opcode.BinaryGreater:        dsp -= 1; dataStack[dsp].Set(dataStack[dsp].num >  dataStack[dsp + 1].num); break;
+				case Opcode.BinaryGreaterEqual:   dsp -= 1; dataStack[dsp].Set(dataStack[dsp].num >= dataStack[dsp + 1].num); break;
+
+				case Opcode.BinaryEqual:          dsp -= 1; 
+					if (dataStack[dsp].type == dataStack[dsp + 1].type) {
+						if (dataStack[dsp].type == Value.Number) dataStack[dsp].Set(dataStack[dsp].num == dataStack[dsp + 1].num);
+						else                                     dataStack[dsp].Set(dataStack[dsp].obj == dataStack[dsp + 1].obj);
+					} else dataStack[dsp].Set(false); 
+					break;
+
 				case Opcode.UnaryNot:       dataStack[dsp].Set(dataStack[dsp].IsFalsy()); break;
-				case Opcode.UnaryNegative:  dataStack[dsp].Set(-dataStack[dsp].num); break;
+				case Opcode.UnaryNegative:  dataStack[dsp].num = -dataStack[dsp].num; break;
 
 				case Opcode.PushSmallInt:   dataStack[++dsp].Set(EatOperand()); break;
 				case Opcode.Jump:           pc = EatOperand(); break;
