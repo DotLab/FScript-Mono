@@ -30,11 +30,14 @@ namespace FuScript {
 				lastPc = pc;
 				switch (Compiler.insts[pc++]) {
 				case Opcode.BinarySubtract: dsp -= 1; dataStack[dsp].num -= dataStack[dsp + 1].num; break;
-				case Opcode.BinaryAdd:      dsp -= 1; dataStack[dsp].num += dataStack[dsp + 1].num; break;
 				case Opcode.BinaryDivide:   dsp -= 1; dataStack[dsp].num /= dataStack[dsp + 1].num; break;
 				case Opcode.BinaryMultiply: dsp -= 1; dataStack[dsp].num *= dataStack[dsp + 1].num; break;
+				case Opcode.BinaryAdd:      dsp -= 1; 
+					if (dataStack[dsp].type == Value.String) dataStack[dsp] = new Value((string)dataStack[dsp].obj + dataStack[dsp + 1].AsString()); 
+					else dataStack[dsp].num += dataStack[dsp + 1].num; 
+					break;
 
-				case Opcode.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].type); break;
+				case Opcode.UnaryNot:       dataStack[dsp] = new Value(dataStack[dsp].IsFalsy()); break;
 				case Opcode.UnaryNegative:  dataStack[dsp] = new Value(-dataStack[dsp].num); break;
 
 				case Opcode.PushSmallInt:   dataStack[++dsp] = new Value(EatOperand()); break;
@@ -54,8 +57,12 @@ namespace FuScript {
 					
 				case Opcode.Print:          System.Console.WriteLine(dataStack[dsp--]); break;
 
+				case Opcode.PushConstTrue:  dataStack[++dsp].type = Value.True; break;
+				case Opcode.PushConstFalse: dataStack[++dsp].type = Value.False; break;
 				case Opcode.PushConstNull:  dataStack[++dsp].type = Value.Null; break;
 
+				case Opcode.BranchIfFalsy:  if (dataStack[dsp--].IsFalsy()) pc = EatOperand(); else EatOperand(); break;
+					
 				case Opcode.MakeFunction:  // n (MF ic)
 					ic = EatOperand();
 					n = dataStack[dsp--].sys1;

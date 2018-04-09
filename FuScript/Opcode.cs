@@ -13,7 +13,9 @@
 
 		public const byte Jump = 18, Return = 19;
 		public const byte MakeFunction = 22, CallFunction = 23;
-		// 25
+
+		public const byte BranchIfFalsy = 26;
+		// 26
 	}
 }
 
