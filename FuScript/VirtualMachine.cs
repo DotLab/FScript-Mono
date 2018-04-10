@@ -119,7 +119,7 @@ namespace FuScript {
 				case Opcode.MakeFunction:  // ic (MF n)
 					n = EatOperand();
 					ic = dataStack[dsp].sys1;
-					dataStack[dsp].Set(n, ic, new Env(env));
+					dataStack[dsp].Set(n, ic, env);
 					break;
 				case Opcode.CallFunction:  // (CF n)
 					n = EatOperand();
@@ -131,7 +131,7 @@ namespace FuScript {
 						ic = dataStack[dsp - n].sys2;
 
 						envStack[++esp] = env;  // Non copy
-						env = (Env)dataStack[dsp - n].obj;  // Load closure
+						env = new Env((Env)dataStack[dsp - n].obj);  // Load closure
 
 						dataStack[dsp - n].Set(pc);
 						pc = ic;
