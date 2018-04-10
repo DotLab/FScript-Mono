@@ -19,8 +19,8 @@
 
 		public const byte BranchIfFalsy = 26;
 
-		public const byte ObjectMemberGet = 35, ObjectMemberSet = 36, ObjectMemberDoSet = 37;
-		// 37
+		public const byte ObjectMemberGet = 35, ObjectMemberSet = 36, ObjectMemberDoSet = 37, MakeObject = 38;
+		// 38
 	}
 }
 
