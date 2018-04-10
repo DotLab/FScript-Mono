@@ -110,10 +110,11 @@ namespace FuScript {
 
 				case Opcode.BranchIfFalsy:  if (dataStack[dsp--].IsFalsy()) pc = EatOperand(); else EatOperand(); break;
 
-				case Opcode.ObjectMemberSet: ((Obj)dataStack[dsp].obj)[Compiler.strings[EatOperand()]] = dataStack[--dsp]; break;
-				case Opcode.ObjectMemberGet: dataStack[dsp] = ((Obj)dataStack[dsp].obj)[Compiler.strings[EatOperand()]]; break;
+				case Opcode.ObjectMemberSet:  ((Obj)dataStack[dsp].obj)[Compiler.strings[EatOperand()]] = dataStack[--dsp]; break;
+				case Opcode.ObjectMemberGet:  dataStack[dsp] = ((Obj)dataStack[dsp].obj)[Compiler.strings[EatOperand()]]; break;
 
-				case Opcode.MakeObject:      dataStack[++dsp].Set(new Obj()); break;
+				case Opcode.MakeObject:       dataStack[++dsp].Set(new Obj()); break;
+				case Opcode.MakeObjectMember: ((Obj)dataStack[--dsp].obj)[Compiler.strings[EatOperand()]] = dataStack[dsp + 1]; break;
 
 				case Opcode.MakeFunction:  // ic (MF n)
 					n = EatOperand();

@@ -2,7 +2,7 @@
 	public static class Token {
 		// One
 		public const byte LParen = 0, RParen = 1, LCurly = 2, RCurly = 3, LSquare = 4, RSquare = 5;
-		public const byte Comma = 6, Dot = 7, Semi = 8;
+		public const byte Comma = 6, Dot = 7, Semi = 8, Colon = 9;
 
 		// One or two
 		public const byte Minus = 20, MinusEqual = 21;
@@ -106,7 +106,7 @@
 		}
 
 		public static void Scan(string text) {
-			Lexer.text = text; length = text.Length; pos = 0; 
+			Lexer.text = text; length = text.Length; pos = 0;
 //			scount = 0; ncount = 0; tcount = 0;
 
 			while (pos < length) {
@@ -121,12 +121,13 @@
 				case ',': Add(Token.Comma); break;
 				case '.': Add(Token.Dot); break;
 				case ';': Add(Token.Semi); break;
-					
+				case ':': Add(Token.Colon); break;
+
 				case '-': Add(Match('=') ? Token.MinusEqual  : Token.Minus); break;
 				case '+': Add(Match('=') ? Token.PlusEqual   : Token.Plus); break;
 				case '/': Add(Match('=') ? Token.SlashEqual  : Token.Slash); break;
 				case '*': Add(Match('=') ? Token.StarEqual   : Token.Star); break;
-					
+
 				case '!': Add(Match('=') ? Token.BangEqual   : Token.Bang); break;
 				case '=': Add(Match('=') ? Token.EqualEqual  : Token.Equal); break;
 
@@ -134,9 +135,9 @@
 				case '>': Add(Match('=') ? Token.RAngleEqual : Match('>') ? Token.RAngleAngle : Token.RAngle); break;
 				case '&': Add(Match('=') ? Token.AndEqual    : Match('&') ? Token.AndAnd :      Token.And); break;
 				case '|': Add(Match('=') ? Token.OrEqual     : Match('|') ? Token.OrOr :        Token.Or); break;
-				
+
 				case ' ': case '\r': case '\t': case '\n': break;
-	
+
 				case '"': case '\'': String(c); break;
 				default:
 					if (IsDigit(c)) Number();
@@ -146,7 +147,7 @@
 				}
 			}
 
-//			if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
+			// if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
 		}
 
 		static void Number() {
@@ -190,6 +191,7 @@
 				case Token.Comma:       sb.Append(","); break;
 				case Token.Dot:         sb.Append("."); break;
 				case Token.Semi:        sb.Append(";"); break;
+				case Token.Colon:       sb.Append(":"); break;
 
 				case Token.Minus:       sb.Append("-"); break;
 				case Token.MinusEqual:  sb.Append("-="); break;
@@ -237,7 +239,7 @@
 				case Token.Function:    sb.Append("function"); break;
 				case Token.Print:       sb.Append("print"); break;
 				case Token.Eof:         sb.Append("eof"); break;
-					
+
 				default:
 					throw new UnrecognizedTokenException(tokens[i - 1]);
 				}
