@@ -35,21 +35,29 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="First\Interpreter.cs" />
-    <Compile Include="First\Lexer.cs" />
-    <Compile Include="First\Parser.cs" />
-    <Compile Include="Second\Interpreter.cs" />
-    <Compile Include="Second\Lexer.cs" />
-    <Compile Include="Second\Parser.cs" />
-    <Compile Include="VirtualMachine.cs" />
-    <Compile Include="Lexer.cs" />
-    <Compile Include="Compiler.cs" />
-    <Compile Include="Value.cs" />
-    <Compile Include="Opcode.cs" />
+    <Compile Include="FuScript\First\Interpreter.cs" />
+    <Compile Include="FuScript\First\Lexer.cs" />
+    <Compile Include="FuScript\First\Parser.cs" />
+    <Compile Include="FuScript\Second\Interpreter.cs" />
+    <Compile Include="FuScript\Second\Lexer.cs" />
+    <Compile Include="FuScript\Second\Parser.cs" />
+    <Compile Include="FuScript\Third\Compiler.cs" />
+    <Compile Include="FuScript\Third\Lexer.cs" />
+    <Compile Include="FuScript\Third\Opcode.cs" />
+    <Compile Include="FuScript\Third\Value.cs" />
+    <Compile Include="FuScript\Third\VirtualMachine.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
-    <Folder Include="First\" />
-    <Folder Include="Second\" />
+    <Folder Include="FuScript\" />
   </ItemGroup>
+  <ProjectExtensions>
+    <MonoDevelop>
+      <Properties>
+        <Policies>
+          <DotNetNamingPolicy ResourceNamePolicy="FileFormatDefault" DirectoryNamespaceAssociation="Hierarchical" />
+        </Policies>
+      </Properties>
+    </MonoDevelop>
+  </ProjectExtensions>
 </Project>

@@ -1,4 +1,4 @@
-﻿namespace FuScript {
+﻿namespace FuScript.Third {
 	public static class Opcode {
 		public const byte BinarySubtract = 2, BinaryAdd = 3, BinaryDivide = 4, BinaryMultiply = 5;
 		public const byte BinaryLogicOr = 27, BinaryLogicAnd = 28, BinaryEqual = 29, BinaryNotEqual = 30;

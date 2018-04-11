@@ -1,8 +1,8 @@
 ﻿using Math = System.Math;
-using Env = System.Collections.Generic.Dictionary<string, FuScript.ValueRef>;
-using Obj = System.Collections.Generic.Dictionary<string, FuScript.Value>;
+using Env = System.Collections.Generic.Dictionary<string, FuScript.Third.ValueRef>;
+using Obj = System.Collections.Generic.Dictionary<string, FuScript.Third.Value>;
 
-namespace FuScript {
+namespace FuScript.Third {
 	public static class VirtualMachine {
 		static ushort pc, length;
 

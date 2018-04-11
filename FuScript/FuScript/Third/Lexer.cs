@@ -1,4 +1,4 @@
-﻿namespace FuScript {
+﻿namespace FuScript.Third {
 	public static class Token {
 		// One
 		public const byte LParen = 0, RParen = 1, LCurly = 2, RCurly = 3, LSquare = 4, RSquare = 5;
