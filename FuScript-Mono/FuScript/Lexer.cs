@@ -42,6 +42,9 @@
 		static string text;
 		static int pos, length;
 
+		static readonly System.Collections.Generic.Dictionary<string, ushort> stringDict = new System.Collections.Generic.Dictionary<string, ushort>();
+		static readonly System.Collections.Generic.Dictionary<int, ushort> intDict = new System.Collections.Generic.Dictionary<int, ushort>();
+		static readonly System.Collections.Generic.Dictionary<float, ushort> floatDict = new System.Collections.Generic.Dictionary<float, ushort>();
 		public static readonly string[] strings = new string[256];
 		public static readonly int[] ints = new int[256];
 		public static readonly float[]  floats =  new float[256];
@@ -56,23 +59,41 @@
 
 		static void Add(byte t, string s) {
 			tokens[tokenCount++] = t;
-			tokens[tokenCount++] = (byte)stringCount;
-			tokens[tokenCount++] = (byte)(stringCount >> 8);
-			strings[stringCount++] = s;
+
+			if (!stringDict.ContainsKey(s)) {
+				strings[stringCount] = s;
+				stringDict[s] = stringCount++;
+			}
+
+			ushort index = stringDict[s];
+			tokens[tokenCount++] = (byte)index;
+			tokens[tokenCount++] = (byte)(index >> 8);
 		}
 
 		static void Add(byte t, int i) {
 			tokens[tokenCount++] = t;
-			tokens[tokenCount++] = (byte)intCount;
-			tokens[tokenCount++] = (byte)(intCount >> 8);
-			ints[intCount++] = i;
+
+			if (!intDict.ContainsKey(i)) {
+				ints[intCount] = i;
+				intDict[i] = intCount++;
+			}
+
+			ushort index = intDict[i];
+			tokens[tokenCount++] = (byte)index;
+			tokens[tokenCount++] = (byte)(index >> 8);
 		}
 
 		static void Add(byte t, float f) {
 			tokens[tokenCount++] = t;
-			tokens[tokenCount++] = (byte)floatCount;
-			tokens[tokenCount++] = (byte)(floatCount >> 8);
-			floats[floatCount++] = f;
+
+			if (!floatDict.ContainsKey(f)) {
+				floats[floatCount] = f;
+				floatDict[f] = floatCount++;
+			}
+
+			ushort index = floatDict[f];
+			tokens[tokenCount++] = (byte)index;
+			tokens[tokenCount++] = (byte)(index >> 8);
 		}
 
 		static bool Match(char c) {

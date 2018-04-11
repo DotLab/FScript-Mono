@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{682D1477-DA4F-4F18-B096-2FE6F5203575}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>FuScript-Mono</RootNamespace>
+    <RootNamespace>FuScriptMono</RootNamespace>
     <AssemblyName>FScript-Mono</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
@@ -48,6 +48,8 @@
     <Compile Include="FuScript\Third\VirtualMachine.cs" />
     <Compile Include="FuScript\Lexer.cs" />
     <Compile Include="FuScript\Token.cs" />
+    <Compile Include="FuScript\Compiler.cs" />
+    <Compile Include="FuScript\Opcode.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
