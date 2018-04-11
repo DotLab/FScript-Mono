@@ -162,19 +162,17 @@
 
 			while (true) {
 				if (Match(Token.Slash)) {
-					Unary();
 					if (MatchType(Int)) {
-						PopType(Int); Emit(Opcode.BIN_DIV_INT); PushType(Int);
+						Unary(); PopType(Int); Emit(Opcode.BIN_DIV_INT); PushType(Int);
 					} else if (MatchType(Float)) {
-						PopType(Float); Emit(Opcode.BIN_DIV_FLOAT); PushType(Float);
-					} else throw new UnexpectedTypeException(CurrentType(), Int, Float);
+						Unary(); PopType(Float); Emit(Opcode.BIN_DIV_FLOAT); PushType(Float);
+					} else throw new UnexpectedTypeException(CurrentType(), Float);
 				} else if (Match(Token.Star)) {
-					Unary();
 					if (MatchType(Int)) {
-						PopType(Int); Emit(Opcode.BIN_MUL_INT); PushType(Int);
+						Unary(); PopType(Int); Emit(Opcode.BIN_DIV_INT); PushType(Int);
 					} else if (MatchType(Float)) {
-						PopType(Float); Emit(Opcode.BIN_MUL_FLOAT); PushType(Float);
-					} else throw new UnexpectedTypeException(CurrentType(), Int, Float);
+						Unary(); PopType(Float); Emit(Opcode.BIN_MUL_FLOAT); PushType(Float);
+					} else throw new UnexpectedTypeException(CurrentType(), Float);
 				} else break;
 			}
 		}
