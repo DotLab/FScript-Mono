@@ -46,6 +46,8 @@
     <Compile Include="FuScript\Third\Opcode.cs" />
     <Compile Include="FuScript\Third\Value.cs" />
     <Compile Include="FuScript\Third\VirtualMachine.cs" />
+    <Compile Include="FuScript\Lexer.cs" />
+    <Compile Include="FuScript\Token.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
