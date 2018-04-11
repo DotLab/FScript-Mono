@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FuScript", "FuScript\FuScript.csproj", "{682D1477-DA4F-4F18-B096-2FE6F5203575}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "FuScript-Mono", "FuScript-Mono\FuScript-Mono.csproj", "{682D1477-DA4F-4F18-B096-2FE6F5203575}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

@@ -5,7 +5,7 @@
     <Platform Condition=" '$(Platform)' == '' ">x86</Platform>
     <ProjectGuid>{682D1477-DA4F-4F18-B096-2FE6F5203575}</ProjectGuid>
     <OutputType>Exe</OutputType>
-    <RootNamespace>FuScript</RootNamespace>
+    <RootNamespace>FuScript-Mono</RootNamespace>
     <AssemblyName>FScript-Mono</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
   </PropertyGroup>
