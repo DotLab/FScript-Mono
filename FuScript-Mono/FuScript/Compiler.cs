@@ -47,15 +47,15 @@
 	}
 
 	public static class Compiler {
-		const byte Null = 0, Boolean = 1, Int = 2, Float = 3, String = 4;
+		const byte Null = 0, BOO = 1, INT = 2, FLO = 3, STR = 4;
 
 		public static string RecantType(byte t) {
 			switch (t) {
 				case Null: return "Null";
-				case Boolean: return "Boolean";
-				case Int: return "Int";
-				case Float: return "Float";
-				case String: return "String";
+				case BOO: return "Boolean";
+				case INT: return "Int";
+				case FLO: return "Float";
+				case STR: return "String";
 				default: throw new CompilerException("Unrecognized type #" + t);
 			}
 		}
@@ -151,7 +151,97 @@
 		}
 
 		static void Expression() {
+			LogicOr();
+		}
+
+		/**
+		 * logic_or -> logic_and ("||" logic_and)*
+		 */
+		static void LogicOr() {
+			LogicAnd();
+			while (Match(Token.OrOr)) {
+				PopType(BOO); LogicAnd(); Emit(Opcode.BIN_OR); PushType(BOO);
+			}
+		}
+
+		/**
+		 * logic_and -> equality ("&&" equality)*
+		 */
+		static void LogicAnd() {
+			Equality();
+			while (Match(Token.AndAnd)) {
+				PopType(BOO); Equality(); Emit(Opcode.BIN_AND); PushType(BOO);
+			}
+		}
+
+		/**
+		 * equality -> comparison (("!=" | "==") comparison)*
+		 */
+		static void Equality() {
+			Comparision();
+
+			while (true) {
+				if (Match(Token.BangEqual)) {
+					if      (MatchType(INT)) { Comparision(); PopType(INT); Emit(Opcode.BIN_EQ_INT); Emit(Opcode.UNARY_NOT); PushType(BOO); }
+					else if (MatchType(FLO)) { Comparision(); PopType(FLO); Emit(Opcode.BIN_EQ_FLO); Emit(Opcode.UNARY_NOT); PushType(BOO); }
+					else if (MatchType(BOO)) { Comparision(); PopType(BOO); Emit(Opcode.BIN_EQ_BOO); Emit(Opcode.UNARY_NOT); PushType(BOO); }
+					else if (MatchType(STR)) { Comparision(); PopType(STR); Emit(Opcode.BIN_EQ_STR); Emit(Opcode.UNARY_NOT); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else if (Match(Token.EqualEqual)) {
+					if      (MatchType(INT)) { Comparision(); PopType(INT); Emit(Opcode.BIN_EQ_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Comparision(); PopType(FLO); Emit(Opcode.BIN_EQ_FLO); PushType(BOO); }
+					else if (MatchType(BOO)) { Comparision(); PopType(BOO); Emit(Opcode.BIN_EQ_BOO); PushType(BOO); }
+					else if (MatchType(STR)) { Comparision(); PopType(STR); Emit(Opcode.BIN_EQ_STR); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else break;
+			}
+		}
+
+		/**
+		 * comparison -> addition ((">" | ">=" | "<" | "<=") addition)*
+		 */
+		static void Comparision() {
+			Addition();
+
+			while (true) {
+				if (Match(Token.LAngle)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_LT_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_LT_FLO); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else if (Match(Token.LAngleEqual)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_LEQ_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_LEQ_FLO); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else if (Match(Token.RAngle)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_GT_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_GT_FLO); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else if (Match(Token.RAngleEqual)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_GEQ_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_GEQ_FLO); PushType(BOO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else break;
+			}
+		}
+
+		/**
+		 * addition -> multiplication (("-" | "+") multiplication)*
+		 */
+		static void Addition() {
 			Multiplication();
+
+			while (true) {
+				if (Match(Token.Minus)) {
+					if      (MatchType(INT)) { Multiplication(); PopType(INT); Emit(Opcode.BIN_SUB_INT); PushType(INT); }
+					else if (MatchType(FLO)) { Multiplication(); PopType(FLO); Emit(Opcode.BIN_SUB_FLO); PushType(FLO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else if (Match(Token.Plus)) {
+					if      (MatchType(INT)) { Multiplication(); PopType(INT); Emit(Opcode.BIN_ADD_INT); PushType(INT); }
+					else if (MatchType(FLO)) { Multiplication(); PopType(FLO); Emit(Opcode.BIN_ADD_FLO); PushType(FLO); }
+					else if (MatchType(STR)) { Multiplication(); PopType(STR); Emit(Opcode.BIN_ADD_STR); PushType(STR); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else break;
+			}
 		}
 
 		/**
@@ -162,17 +252,13 @@
 
 			while (true) {
 				if (Match(Token.Slash)) {
-					if (MatchType(Int)) {
-						Unary(); PopType(Int); Emit(Opcode.BIN_DIV_INT); PushType(Int);
-					} else if (MatchType(Float)) {
-						Unary(); PopType(Float); Emit(Opcode.BIN_DIV_FLOAT); PushType(Float);
-					} else throw new UnexpectedTypeException(CurrentType(), Float);
+					if      (MatchType(INT)) { Unary(); PopType(INT); Emit(Opcode.BIN_DIV_INT); PushType(INT); }
+					else if (MatchType(FLO)) { Unary(); PopType(FLO); Emit(Opcode.BIN_DIV_FLO); PushType(FLO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
 				} else if (Match(Token.Star)) {
-					if (MatchType(Int)) {
-						Unary(); PopType(Int); Emit(Opcode.BIN_DIV_INT); PushType(Int);
-					} else if (MatchType(Float)) {
-						Unary(); PopType(Float); Emit(Opcode.BIN_MUL_FLOAT); PushType(Float);
-					} else throw new UnexpectedTypeException(CurrentType(), Float);
+					if      (MatchType(INT)) { Unary(); PopType(INT); Emit(Opcode.BIN_MUL_INT); PushType(INT); }
+					else if (MatchType(FLO)) { Unary(); PopType(FLO); Emit(Opcode.BIN_MUL_FLO); PushType(FLO); }
+					else throw new UnexpectedTypeException(CurrentType(), FLO);
 				} else break;
 			}
 		}
@@ -184,14 +270,12 @@
 		static void Unary() {
 			if (Match(Token.Bang)) {
 				Primary(true);
-				Emit(Opcode.UNARY_NOT); PopType(Boolean); PushType(Boolean); 
+				Emit(Opcode.UNARY_NOT); PopType(BOO); PushType(BOO);
 			} else if (Match(Token.Minus)) {
 				Primary(true);
-				if (MatchType(Int)) {
-					Emit(Opcode.UNARY_NEG_INT); PushType(Int);
-				} else if (MatchType(Float)) {
-					Emit(Opcode.UNARY_NEG_FLOAT); PushType(Float);
-				} else throw new UnexpectedTypeException(CurrentType(), Int, Float);
+				if      (MatchType(INT)) { Emit(Opcode.UNARY_NEG_INT); PushType(INT); }
+				else if (MatchType(FLO)) { Emit(Opcode.UNARY_NEG_FLO); PushType(FLO); }
+				else throw new UnexpectedTypeException(CurrentType(), INT, FLO);
 			} else Primary(false);
 		}
 
@@ -200,22 +284,14 @@
 		 *          | "(" expression ")"
 		 */
 		static void Primary(bool forced) {
-			if (Match(Token.Int)) {
-				Emit(Opcode.PUSH_CONST_INT, EatLiteral()); PushType(Int);
-			} else if (Match(Token.Float)) {
-				Emit(Opcode.PUSH_CONST_FLOAT, EatLiteral()); PushType(Float);
-			} else if (Match(Token.String)) {
-				Emit(Opcode.PUSH_CONST_STRING, EatLiteral()); PushType(String);
-			} else if (Match(Token.KFalse)) {
-				Emit(Opcode.PUSH_FALSE, EatLiteral()); PushType(Boolean);
-			} else if (Match(Token.KTrue)) {
-				Emit(Opcode.PUSH_TRUE, EatLiteral()); PushType(Boolean);
-			} else if (Match(Token.KNull)) {
-				Emit(Opcode.PUSH_NULL, EatLiteral()); PushType(Null);
-			} else if (Match(Token.LParen)) {
-				Expression();
-				Eat(Token.RParen);
-			} else if (forced) throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
+			if      (Match(Token.Int))    { Emit(Opcode.PUSH_CONST_INT, EatLiteral()); PushType(INT); }
+			else if (Match(Token.Float))  { Emit(Opcode.PUSH_CONST_FLO, EatLiteral()); PushType(FLO); }
+			else if (Match(Token.String)) { Emit(Opcode.PUSH_CONST_STR, EatLiteral()); PushType(STR); }
+			else if (Match(Token.KFalse)) { Emit(Opcode.PUSH_FALSE, EatLiteral()); PushType(BOO); }
+			else if (Match(Token.KTrue))  { Emit(Opcode.PUSH_TRUE, EatLiteral()); PushType(BOO); }
+			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL, EatLiteral()); PushType(Null); }
+			else if (Match(Token.LParen)) { Expression(); Eat(Token.RParen); }
+			else if (forced) throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
 		}
 
 		public static string Recant() {
