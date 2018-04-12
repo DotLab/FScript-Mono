@@ -46,6 +46,14 @@
 		public TypeStackUnderflowException(byte t) : base("TypeStack underflow, expecting " + Compiler.RecantType(t)) { }
 	}
 
+	public class VariableUndefinedException : CompilerException {
+		public VariableUndefinedException(string id) : base("Variable '" + id + "' is undefiend") { }
+	}
+
+	public class VariableAlreadyDefinedException : CompilerException {
+		public VariableAlreadyDefinedException(string id, byte t) : base("Variable '" + id + "' is already defined as " + Compiler.RecantType(t)) { }
+	}
+
 	public class UnrecognizedOpcodeException : CompilerException {
 		public UnrecognizedOpcodeException(byte t) : base("Unrecognized opcode #" + t) { }
 	}
@@ -58,7 +66,7 @@
 				case NIL: return "NIL";
 				case BOO: return "BOO";
 				case INT: return "INT";
-				case FLO: return "FlO";
+				case FLO: return "FLO";
 				case STR: return "STR";
 				default: throw new CompilerException("Unrecognized type #" + t);
 			}
@@ -86,6 +94,7 @@
 		static readonly byte[] typeStack = new byte[256];
 		static int typeStackPointer = -1;
 
+		static readonly System.Collections.Generic.Dictionary<ushort, byte> varDict = new System.Collections.Generic.Dictionary<ushort, byte>();
 		static bool isScanning;
 
 		static void Log(string str) {
@@ -183,7 +192,7 @@
 		 */
 		public static void Statement() {
 			if (Peek(Token.LCurly)) Block();
-			//else if (Peek(Token.KVar)) VarDecl();
+			else if (Peek(Token.KVar)) VarDecl();
 			//else if (Peek(Token.KFunction)) FuncDecl();
 			else if (Peek(Token.KIf)) IfStmt();
 			else if (Peek(Token.KWhile)) WhileStmt();
@@ -200,6 +209,24 @@
 		static void Block() {
 			Eat(Token.LCurly);
 			while (!Match(Token.RCurly)) Statement();
+		}
+
+		/**
+		 * varDecl -> "var" IDENTIFIER ("=" expression)? ";"
+		 */
+		static void VarDecl() {
+			Eat(Token.KVar); Eat(Token.Id);
+			ushort id = EatLiteral(); Eat(Token.Equal);
+			Expression(); Eat(Token.Semi);
+
+			if (varDict.ContainsKey(id)) throw new VariableAlreadyDefinedException(Lexer.strings[id], varDict[id]);
+
+			if      (MatchType(INT)) { varDict[id] = INT; Emit(Opcode.POP_NEW_VAR_INT, id); }
+			else if (MatchType(FLO)) { varDict[id] = FLO; Emit(Opcode.POP_NEW_VAR_FLO, id); }
+			else if (MatchType(BOO)) { varDict[id] = BOO; Emit(Opcode.POP_NEW_VAR_BOO, id); }
+			else if (MatchType(STR)) { varDict[id] = STR; Emit(Opcode.POP_NEW_VAR_STR, id); }
+			else if (MatchType(NIL)) { varDict[id] = NIL; Emit(Opcode.POP_NEW_VAR_NIL, id); }
+			else throw new UnexpectedTypeException(CurrentType(), INT, FLO, BOO, STR, NIL);
 		}
 
 		/**
@@ -423,11 +450,21 @@
 			else if (Match(Token.KTrue))  { Emit(Opcode.PUSH_TRUE); PushType(BOO); }
 			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL); PushType(NIL); }
 			else if (Match(Token.LParen)) { Expression(); Eat(Token.RParen); }
-			else throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
+			else if (Match(Token.Id)) {
+				ushort id = EatLiteral();
+				if (!varDict.ContainsKey(id)) throw new VariableUndefinedException(Lexer.strings[id]);
+				byte type = varDict[id];
+				if      (type == INT) { Emit(Opcode.PUSH_VAR_INT, id); PushType(INT); }
+				else if (type == FLO) { Emit(Opcode.PUSH_VAR_FLO, id); PushType(FLO); }
+				else if (type == BOO) { Emit(Opcode.PUSH_VAR_BOO, id); PushType(BOO); }
+				else if (type == STR) { Emit(Opcode.PUSH_VAR_STR, id); PushType(STR); }
+				else if (type == NIL) { Emit(Opcode.PUSH_VAR_NIL, id); PushType(NIL); }
+				else throw new UnexpectedTypeException(CurrentType(), INT, FLO, BOO, STR, NIL);
+			} else throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
 		}
 
 		public static string Recant() {
-			return "";
+			return "dfasdf";
 		}
 	}
 }
