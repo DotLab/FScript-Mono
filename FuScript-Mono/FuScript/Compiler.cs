@@ -60,6 +60,18 @@
 			}
 		}
 
+		static System.Text.StringBuilder sb = new System.Text.StringBuilder();
+		public static string RecantTypeStack() {
+			sb.Clear();
+			sb.Append("stck: [ ");
+			for (int i = 0; i <= typeStackPointer; i++) {
+				sb.Append(RecantType(typeStack[i]));
+				if (i + 1 <= typeStackPointer) sb.Append(", ");
+			}
+			sb.Append(" ]\n");
+			return sb.ToString();
+		}
+
 		static ushort pos, length;
 
 		public static readonly byte[] insts = new byte[1024];
@@ -67,7 +79,7 @@
 		public static ushort instCount, stmtCount;
 
 		static readonly byte[] typeStack = new byte[256];
-		static int typeStackPointer = -1;
+		static int typeStackPointer;
 
 		static bool isScanning;
 
@@ -84,12 +96,12 @@
 		}
 
 		static bool Match(byte t) {
-			if (Current() == t) { Log(Token.Recant(Current()) + ", "); pos += 1; return true; }
+			if (Current() == t) { Log(Token.Recant(Current()) + "\n"); pos += 1; return true; }
 			return false;
 		}
 
 		static void Eat(byte t) {
-			if (Current() == t) { Log(Token.Recant(Current()) + ", "); pos++; return; }
+			if (Current() == t) { Log(Token.Recant(Current()) + "\n"); pos++; return; }
 			throw new UnexpectedTokenException(Current(), t);
 		}
 
@@ -127,20 +139,21 @@
 
 		static void PushType(byte t) {
 			typeStack[++typeStackPointer] = t;
+			Log(RecantTypeStack());
 		}
 
 		static bool MatchType(byte t) {
-			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; return true; }
+			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; Log(RecantTypeStack()); return true; }
 			return false;
 		}
 
-		static int PopType(byte t) {
-			if (typeStack[typeStackPointer] == t) return typeStackPointer -= 1;
+		static void PopType(byte t) {
+			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; Log(RecantTypeStack()); }
 			throw new UnexpectedTypeException(typeStack[typeStackPointer], t);
 		}
 
 		public static void Reset() {
-			pos = 0; instCount = 0; stmtCount = 0; typeStackPointer = -1;
+			pos = 0; instCount = 0; stmtCount = 0; typeStackPointer = 0;
 			isScanning = false;
 		}
 
@@ -151,17 +164,9 @@
 		}
 
 		/**
-		 * block -> "{" declaration* "}"
-		 */
-		static void Block(bool needNewEnv = true) {
-			Eat(Token.LCurly);
-			//if (needNewEnv) Emit(Opcode.CloneEnv);
-			//while (!Match(Token.RCurly)) Declaration();
-			//if (needNewEnv) Emit(Opcode.RestoreEnv);
-		}
-
-		/**
 		 * statement -> block
+		 *            | varDecl
+		 *            | funcDecl
 		 *            | ifStmt
 		 *            | whileStmt
 		 *            | forStmt
@@ -171,6 +176,8 @@
 		 */
 		public static void Statement() {
 			if (Peek(Token.LCurly)) Block();
+			//else if (Peek(Token.KVar)) VarDecl();
+			//else if (Peek(Token.KFunction)) FuncDecl();
 			//else if (Peek(Token.If)) IfStmt();
 			//else if (Peek(Token.While)) WhileStmt();
 			//else if (Peek(Token.Return)) ReturnStmt();
@@ -181,14 +188,22 @@
 		}
 
 		/**
+		 * block -> "{" declaration* "}"
+		 */
+		static void Block() {
+			Eat(Token.LCurly);
+			while (!Match(Token.RCurly)) Statement();
+		}
+
+		/**
 		 * exprStmt -> expression ";"
 		 */
 		static void ExprStmt() {
 			Expression();
-			if      (MatchType(INT)) { PopType(INT); Emit(Opcode.POP_INT); }
-			else if (MatchType(FLO)) { PopType(FLO); Emit(Opcode.POP_FLO); }
-			else if (MatchType(BOO)) { PopType(BOO); Emit(Opcode.POP_BOO); }
-			else if (MatchType(STR)) { PopType(STR); Emit(Opcode.POP_STR); }
+			if      (MatchType(INT)) { Emit(Opcode.POP_INT); }
+			else if (MatchType(FLO)) { Emit(Opcode.POP_FLO); }
+			else if (MatchType(BOO)) { Emit(Opcode.POP_BOO); }
+			else if (MatchType(STR)) { Emit(Opcode.POP_STR); }
 			Eat(Token.Semi);
 		}
 
@@ -332,9 +347,9 @@
 			if      (Match(Token.Int))    { Emit(Opcode.PUSH_CONST_INT, EatLiteral()); PushType(INT); }
 			else if (Match(Token.Float))  { Emit(Opcode.PUSH_CONST_FLO, EatLiteral()); PushType(FLO); }
 			else if (Match(Token.String)) { Emit(Opcode.PUSH_CONST_STR, EatLiteral()); PushType(STR); }
-			else if (Match(Token.KFalse)) { Emit(Opcode.PUSH_FALSE, EatLiteral()); PushType(BOO); }
-			else if (Match(Token.KTrue))  { Emit(Opcode.PUSH_TRUE, EatLiteral()); PushType(BOO); }
-			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL, EatLiteral()); PushType(Null); }
+			else if (Match(Token.KFalse)) { Emit(Opcode.PUSH_FALSE); PushType(BOO); }
+			else if (Match(Token.KTrue))  { Emit(Opcode.PUSH_TRUE); PushType(BOO); }
+			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL); PushType(Null); }
 			else if (Match(Token.LParen)) { Expression(); Eat(Token.RParen); }
 			else if (forced) throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
 		}
