@@ -42,20 +42,24 @@
 		public UnexpectedTypeException(byte t, params byte[] es) : base("Unexpected type " + Compiler.RecantType(t) + ", expecting " + Visualize(es)) { }
 	}
 
+	public class TypeStackUnderflowException : CompilerException {
+		public TypeStackUnderflowException(byte t) : base("TypeStack underflow, expecting " + Compiler.RecantType(t)) { }
+	}
+
 	public class UnrecognizedOpcodeException : CompilerException {
 		public UnrecognizedOpcodeException(byte t) : base("Unrecognized opcode #" + t) { }
 	}
 
 	public static class Compiler {
-		const byte Null = 0, BOO = 1, INT = 2, FLO = 3, STR = 4;
+		const byte NIL = 0, BOO = 1, INT = 2, FLO = 3, STR = 4;
 
 		public static string RecantType(byte t) {
 			switch (t) {
-				case Null: return "Null";
-				case BOO: return "Boolean";
-				case INT: return "Int";
-				case FLO: return "Float";
-				case STR: return "String";
+				case NIL: return "NIL";
+				case BOO: return "BOO";
+				case INT: return "INT";
+				case FLO: return "FlO";
+				case STR: return "STR";
 				default: throw new CompilerException("Unrecognized type #" + t);
 			}
 		}
@@ -63,12 +67,13 @@
 		static System.Text.StringBuilder sb = new System.Text.StringBuilder();
 		public static string RecantTypeStack() {
 			sb.Clear();
-			sb.Append("stck: [ ");
+			sb.Append("    [ ");
 			for (int i = 0; i <= typeStackPointer; i++) {
 				sb.Append(RecantType(typeStack[i]));
 				if (i + 1 <= typeStackPointer) sb.Append(", ");
+				else sb.Append(" ");
 			}
-			sb.Append(" ]\n");
+			sb.Append("]\n");
 			return sb.ToString();
 		}
 
@@ -79,7 +84,7 @@
 		public static ushort instCount, stmtCount;
 
 		static readonly byte[] typeStack = new byte[256];
-		static int typeStackPointer;
+		static int typeStackPointer = -1;
 
 		static bool isScanning;
 
@@ -134,7 +139,7 @@
 		}
 
 		static byte CurrentType() {
-			return typeStackPointer < 0 ? Null : typeStack[typeStackPointer];
+			return typeStackPointer < 0 ? NIL : typeStack[typeStackPointer];
 		}
 
 		static void PushType(byte t) {
@@ -143,17 +148,19 @@
 		}
 
 		static bool MatchType(byte t) {
+			if (typeStackPointer < 0) throw new TypeStackUnderflowException(t);
 			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; Log(RecantTypeStack()); return true; }
 			return false;
 		}
 
 		static void PopType(byte t) {
-			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; Log(RecantTypeStack()); }
+			if (typeStackPointer < 0) throw new TypeStackUnderflowException(t);
+			if (typeStack[typeStackPointer] == t) { typeStackPointer -= 1; Log(RecantTypeStack()); return; }
 			throw new UnexpectedTypeException(typeStack[typeStackPointer], t);
 		}
 
 		public static void Reset() {
-			pos = 0; instCount = 0; stmtCount = 0; typeStackPointer = 0;
+			pos = 0; instCount = 0; stmtCount = 0; typeStackPointer = -1;
 			isScanning = false;
 		}
 
@@ -178,10 +185,10 @@
 			if (Peek(Token.LCurly)) Block();
 			//else if (Peek(Token.KVar)) VarDecl();
 			//else if (Peek(Token.KFunction)) FuncDecl();
-			//else if (Peek(Token.If)) IfStmt();
-			//else if (Peek(Token.While)) WhileStmt();
-			//else if (Peek(Token.Return)) ReturnStmt();
-			//else if (Peek(Token.Print)) PrintStmt();
+			else if (Peek(Token.KIf)) IfStmt();
+			else if (Peek(Token.KWhile)) WhileStmt();
+			//else if (Peek(Token.KReturn)) ReturnStmt();
+			//else if (Peek(Token.KPrint)) PrintStmt();
 			else ExprStmt();
 
 			stmtCount += 1;
@@ -196,15 +203,54 @@
 		}
 
 		/**
+		 * ifStmt -> "if" "(" expression ")" statement ("else" statement)?
+		 */
+		static void IfStmt() {
+			Eat(Token.KIf); Eat(Token.LParen);
+			Expression(); PopType(BOO);
+			// ushort ifIc = icount;
+			// Emit(Opcode.BranchIfFalsy, 0);
+			Eat(Token.RParen);
+
+			Statement();
+
+			if (Match(Token.KElse)) {
+				// ushort elseJmpIc = icount;
+				// Emit(Opcode.Jump, 0);
+				// ushort elseIc = icount;
+				Statement();
+				// Fill(elseJmpIc, icount);
+				// Fill(ifIc, elseIc);
+			}
+			// } else Fill(ifIc, icount);
+		}
+
+		/**
+		 * whileStmt -> "while" "(" expression ")" statement
+		 */
+		static void WhileStmt() {
+			Eat(Token.KWhile); Eat(Token.LParen);
+			// ushort condIc = icount;
+			Expression(); PopType(BOO);
+			// ushort branchIc = icount;
+			// Emit(Opcode.BranchIfFalsy, 0);
+			Eat(Token.RParen);
+
+			Statement();
+			// Emit(Opcode.Jump, condIc);
+			// Fill(branchIc, icount);
+		}
+
+		/**
 		 * exprStmt -> expression ";"
 		 */
 		static void ExprStmt() {
 			Expression();
+			Eat(Token.Semi);
 			if      (MatchType(INT)) { Emit(Opcode.POP_INT); }
 			else if (MatchType(FLO)) { Emit(Opcode.POP_FLO); }
 			else if (MatchType(BOO)) { Emit(Opcode.POP_BOO); }
 			else if (MatchType(STR)) { Emit(Opcode.POP_STR); }
-			Eat(Token.Semi);
 		}
 
 		/**
@@ -220,7 +266,7 @@
 		static void LogicOr() {
 			LogicAnd();
 			while (Match(Token.OrOr)) {
-				PopType(BOO); LogicAnd(); PushType(BOO); Emit(Opcode.BIN_OR);
+				PopType(BOO); LogicAnd(); PopType(BOO); PushType(BOO); Emit(Opcode.BIN_OR);
 			}
 		}
 
@@ -230,7 +276,7 @@
 		static void LogicAnd() {
 			Equality();
 			while (Match(Token.AndAnd)) {
-				PopType(BOO); Equality(); PushType(BOO); Emit(Opcode.BIN_AND);
+				PopType(BOO); Equality(); PopType(BOO); PushType(BOO); Emit(Opcode.BIN_AND);
 			}
 		}
 
@@ -258,28 +304,54 @@
 		}
 
 		/**
-		 * comparison -> addition ((">" | ">=" | "<" | "<=") addition)*
+		 * comparison -> bitwise ((">" | ">=" | "<" | "<=") bitwise)*
 		 */
 		static void Comparision() {
-			Addition();
+			Bitwise();
 
 			while (true) {
 				if (Match(Token.LAngle)) {
-					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_LT_INT); PushType(BOO); }
-					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_LT_FLO); PushType(BOO); }
+					if      (MatchType(INT)) { Bitwise(); PopType(INT); Emit(Opcode.BIN_LT_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Bitwise(); PopType(FLO); Emit(Opcode.BIN_LT_FLO); PushType(BOO); }
 					else throw new UnexpectedTypeException(CurrentType(), FLO);
 				} else if (Match(Token.LAngleEqual)) {
-					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_LEQ_INT); PushType(BOO); }
-					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_LEQ_FLO); PushType(BOO); }
+					if      (MatchType(INT)) { Bitwise(); PopType(INT); Emit(Opcode.BIN_LEQ_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Bitwise(); PopType(FLO); Emit(Opcode.BIN_LEQ_FLO); PushType(BOO); }
 					else throw new UnexpectedTypeException(CurrentType(), FLO);
 				} else if (Match(Token.RAngle)) {
-					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_GT_INT); PushType(BOO); }
-					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_GT_FLO); PushType(BOO); }
+					if      (MatchType(INT)) { Bitwise(); PopType(INT); Emit(Opcode.BIN_GT_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Bitwise(); PopType(FLO); Emit(Opcode.BIN_GT_FLO); PushType(BOO); }
 					else throw new UnexpectedTypeException(CurrentType(), FLO);
 				} else if (Match(Token.RAngleEqual)) {
-					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_GEQ_INT); PushType(BOO); }
-					else if (MatchType(FLO)) { Addition(); PopType(FLO); Emit(Opcode.BIN_GEQ_FLO); PushType(BOO); }
+					if      (MatchType(INT)) { Bitwise(); PopType(INT); Emit(Opcode.BIN_GEQ_INT); PushType(BOO); }
+					else if (MatchType(FLO)) { Bitwise(); PopType(FLO); Emit(Opcode.BIN_GEQ_FLO); PushType(BOO); }
 					else throw new UnexpectedTypeException(CurrentType(), FLO);
+				} else break;
+			}
+		}
+
+		/**
+		 * bitwise -> multiplication (("<<" | ">>" | "&" | "|" | "^") multiplication)*
+		 */
+		static void Bitwise() {
+			Addition();
+
+			while (true) {
+				if (Match(Token.LAngleAngle)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_BIT_SHL); PushType(INT); }
+					else throw new UnexpectedTypeException(CurrentType(), INT);
+				} else if (Match(Token.RAngleAngle)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_BIT_SHR); PushType(INT); }
+					else throw new UnexpectedTypeException(CurrentType(), INT);
+				} else if (Match(Token.And)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_BIT_AND); PushType(INT); }
+					else throw new UnexpectedTypeException(CurrentType(), INT);
+				} else if (Match(Token.Or)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_BIT_OR); PushType(INT); }
+					else throw new UnexpectedTypeException(CurrentType(), INT);
+				} else if (Match(Token.Caret)) {
+					if      (MatchType(INT)) { Addition(); PopType(INT); Emit(Opcode.BIN_BIT_XOR); PushType(INT); }
+					else throw new UnexpectedTypeException(CurrentType(), INT);
 				} else break;
 			}
 		}
@@ -329,29 +401,29 @@
 		 */
 		static void Unary() {
 			if (Match(Token.Bang)) {
-				Primary(true);
+				Primary();
 				Emit(Opcode.UNARY_NOT); PopType(BOO); PushType(BOO);
 			} else if (Match(Token.Minus)) {
-				Primary(true);
+				Primary();
 				if      (MatchType(INT)) { Emit(Opcode.UNARY_NEG_INT); PushType(INT); }
 				else if (MatchType(FLO)) { Emit(Opcode.UNARY_NEG_FLO); PushType(FLO); }
 				else throw new UnexpectedTypeException(CurrentType(), INT, FLO);
-			} else Primary(false);
+			} else Primary();
 		}
 
 		/**
 		 * primary -> NUMBER | STRING | "false" | "true" | "null" | IDENTIFIER
 		 *          | "(" expression ")"
 		 */
-		static void Primary(bool forced) {
+		static void Primary() {
 			if      (Match(Token.Int))    { Emit(Opcode.PUSH_CONST_INT, EatLiteral()); PushType(INT); }
 			else if (Match(Token.Float))  { Emit(Opcode.PUSH_CONST_FLO, EatLiteral()); PushType(FLO); }
 			else if (Match(Token.String)) { Emit(Opcode.PUSH_CONST_STR, EatLiteral()); PushType(STR); }
 			else if (Match(Token.KFalse)) { Emit(Opcode.PUSH_FALSE); PushType(BOO); }
 			else if (Match(Token.KTrue))  { Emit(Opcode.PUSH_TRUE); PushType(BOO); }
-			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL); PushType(Null); }
+			else if (Match(Token.KNull))  { Emit(Opcode.PUSH_NULL); PushType(NIL); }
 			else if (Match(Token.LParen)) { Expression(); Eat(Token.RParen); }
-			else if (forced) throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
+			else throw new UnexpectedTokenException(Current(), Token.Int, Token.Float, Token.String, Token.KFalse, Token.KTrue, Token.KNull, Token.LParen);
 		}
 
 		public static string Recant() {
