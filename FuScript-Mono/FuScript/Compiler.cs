@@ -64,7 +64,7 @@
 
 		public static readonly byte[] insts = new byte[1024];
 		public static readonly ushort[] marks = new ushort[1024];
-		public static ushort instCount, declCount;
+		public static ushort instCount, stmtCount;
 
 		static readonly byte[] typeStack = new byte[256];
 		static int typeStackPointer = -1;
@@ -100,14 +100,14 @@
 		static void Emit(byte opcode) {
 			if (isScanning) return;
 
-			marks[instCount] = declCount;
+			marks[instCount] = stmtCount;
 			insts[instCount++] = opcode;
 		}
 
 		static void Emit(byte opcode, ushort operand) {
 			if (isScanning) return;
 
-			marks[instCount] = declCount;
+			marks[instCount] = stmtCount;
 			insts[instCount++] = opcode;
 			insts[instCount++] = (byte)(operand & 0xff);
 			insts[instCount++] = (byte)(operand >> 8);
@@ -140,16 +140,61 @@
 		}
 
 		public static void Reset() {
-			pos = 0; instCount = 0; declCount = 0; typeStackPointer = -1;
+			pos = 0; instCount = 0; stmtCount = 0; typeStackPointer = -1;
 			isScanning = false;
 		}
 
 		public static void Compile() {
 			length = Lexer.tokenCount;
 
-			Expression();
+			Statement();
 		}
 
+		/**
+		 * block -> "{" declaration* "}"
+		 */
+		static void Block(bool needNewEnv = true) {
+			Eat(Token.LCurly);
+			//if (needNewEnv) Emit(Opcode.CloneEnv);
+			//while (!Match(Token.RCurly)) Declaration();
+			//if (needNewEnv) Emit(Opcode.RestoreEnv);
+		}
+
+		/**
+		 * statement -> block
+		 *            | ifStmt
+		 *            | whileStmt
+		 *            | forStmt
+		 *            | returnStmt
+		 *            | printStmt
+		 *            | exprStmt
+		 */
+		public static void Statement() {
+			if (Peek(Token.LCurly)) Block();
+			//else if (Peek(Token.If)) IfStmt();
+			//else if (Peek(Token.While)) WhileStmt();
+			//else if (Peek(Token.Return)) ReturnStmt();
+			//else if (Peek(Token.Print)) PrintStmt();
+			else ExprStmt();
+
+			stmtCount += 1;
+		}
+
+		/**
+		 * exprStmt -> expression ";"
+		 */
+		static void ExprStmt() {
+			Expression();
+			if      (MatchType(INT)) { PopType(INT); Emit(Opcode.POP_INT); }
+			else if (MatchType(FLO)) { PopType(FLO); Emit(Opcode.POP_FLO); }
+			else if (MatchType(BOO)) { PopType(BOO); Emit(Opcode.POP_BOO); }
+			else if (MatchType(STR)) { PopType(STR); Emit(Opcode.POP_STR); }
+			Eat(Token.Semi);
+		}
+
+		/**
+		 * expression -> assignment
+		 */
 		static void Expression() {
 			LogicOr();
 		}
@@ -160,7 +205,7 @@
 		static void LogicOr() {
 			LogicAnd();
 			while (Match(Token.OrOr)) {
-				PopType(BOO); LogicAnd(); Emit(Opcode.BIN_OR); PushType(BOO);
+				PopType(BOO); LogicAnd(); PushType(BOO); Emit(Opcode.BIN_OR);
 			}
 		}
 
@@ -170,7 +215,7 @@
 		static void LogicAnd() {
 			Equality();
 			while (Match(Token.AndAnd)) {
-				PopType(BOO); Equality(); Emit(Opcode.BIN_AND); PushType(BOO);
+				PopType(BOO); Equality(); PushType(BOO); Emit(Opcode.BIN_AND);
 			}
 		}
 

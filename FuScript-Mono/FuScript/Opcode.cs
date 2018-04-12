@@ -12,5 +12,7 @@ namespace FuScript {
 		public const byte BIN_EQ_INT = 33, BIN_EQ_FLO = 34, BIN_EQ_BOO = 35, BIN_EQ_STR = 36;
 
 		public const byte BIN_AND = 37, BIN_OR = 38;
+
+		public const byte POP_INT = 50, POP_FLO = 51, POP_BOO = 52, POP_STR = 53;
 	}
 }
