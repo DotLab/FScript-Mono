@@ -1,5 +1,4 @@
-﻿using System;
-namespace FuScript {
+﻿namespace FuScript.Forth {
 	public static class Opcode {
 		public const byte PUSH_CONST_INT = 1, PUSH_CONST_FLO = 2, PUSH_CONST_STR = 3, PUSH_NULL = 4, PUSH_TRUE = 5, PUSH_FALSE = 6;
 		public const byte UNARY_NOT = 10, UNARY_NEG_INT = 11, UNARY_NEG_FLO = 12;

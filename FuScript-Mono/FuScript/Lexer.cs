@@ -1,14 +1,6 @@
 ﻿namespace FuScript {
-	public abstract class LexerException : System.Exception {
-		protected LexerException(string m) : base(m) { }
-	}
-
-	public class UnexpectedCharacterException : LexerException {
+	public class UnexpectedCharacterException : System.Exception {
 		public UnexpectedCharacterException(char c) : base("Unexpected character '" + c + "'") { }
-	}
-
-	public class UnrecognizedTokenException : LexerException {
-		public UnrecognizedTokenException(byte t) : base("Unrecognized token #" + t) { }
 	}
 
 	public static class Lexer {
@@ -30,44 +22,46 @@
 			keywords.Add("function", Token.KFunction);
 			keywords.Add("print",    Token.KPrint);
 
+			keywords.Add("eof",      Token.Eof);
+
+			keywords.Add("and",      Token.AndAnd);
+			keywords.Add("or",       Token.OrOr);
+			keywords.Add("xor",      Token.Caret);
+
 			keywords.Add("begin",    Token.LCurly);
 			keywords.Add("end",      Token.RCurly);
-			keywords.Add("let",      Token.KVar);
-			keywords.Add("const",    Token.KVar);
 			keywords.Add("fun",      Token.KFunction);
 			keywords.Add("func",     Token.KFunction);
-			keywords.Add("eof",      Token.Eof);
+
+			keywords.Add("let",      Token.KVar);
+			keywords.Add("const",    Token.KVar);
+			keywords.Add("auto",     Token.KVar);
+			keywords.Add("int",      Token.KVar);
+			keywords.Add("long",     Token.KVar);
+			keywords.Add("float",    Token.KVar);
+			keywords.Add("double",   Token.KVar);
 		}
 
 		static string text;
 		static int pos, length;
 
+		static readonly System.Collections.Generic.Dictionary<int, ushort>    intDict = new System.Collections.Generic.Dictionary<int, ushort>();
+		static readonly System.Collections.Generic.Dictionary<float, ushort>  floatDict = new System.Collections.Generic.Dictionary<float, ushort>();
 		static readonly System.Collections.Generic.Dictionary<string, ushort> stringDict = new System.Collections.Generic.Dictionary<string, ushort>();
-		static readonly System.Collections.Generic.Dictionary<int, ushort> intDict = new System.Collections.Generic.Dictionary<int, ushort>();
-		static readonly System.Collections.Generic.Dictionary<float, ushort> floatDict = new System.Collections.Generic.Dictionary<float, ushort>();
-		public static readonly string[] strings = new string[256];
-		public static readonly int[] ints = new int[256];
+		public static readonly int[]    ints = new int[256];
 		public static readonly float[]  floats =  new float[256];
-		public static ushort stringCount, intCount, floatCount;
+		public static readonly string[] strings = new string[256];
+		public static ushort intCount, floatCount, stringCount;
 
 		public static readonly byte[] tokens = new byte[1024];
 		public static ushort tokenCount;
 
-		static void Add(byte t) {
-			tokens[tokenCount++] = t;
+		static void Log(string str) {
+			System.Console.Write(str);
 		}
 
-		static void Add(byte t, string s) {
+		static void Add(byte t) {
 			tokens[tokenCount++] = t;
-
-			if (!stringDict.ContainsKey(s)) {
-				strings[stringCount] = s;
-				stringDict[s] = stringCount++;
-			}
-
-			ushort index = stringDict[s];
-			tokens[tokenCount++] = (byte)index;
-			tokens[tokenCount++] = (byte)(index >> 8);
 		}
 
 		static void Add(byte t, int i) {
@@ -92,6 +86,19 @@
 			}
 
 			ushort index = floatDict[f];
+			tokens[tokenCount++] = (byte)index;
+			tokens[tokenCount++] = (byte)(index >> 8);
+		}
+
+		static void Add(byte t, string s) {
+			tokens[tokenCount++] = t;
+
+			if (!stringDict.ContainsKey(s)) {
+				strings[stringCount] = s;
+				stringDict[s] = stringCount++;
+			}
+
+			ushort index = stringDict[s];
 			tokens[tokenCount++] = (byte)index;
 			tokens[tokenCount++] = (byte)(index >> 8);
 		}
@@ -131,10 +138,12 @@
 					case '.': Add(Token.Dot); break;
 					case ';': Add(Token.Semi); break;
 					case ':': Add(Token.Colon); break;
+					case '?': Add(Token.Quest); break;
+					case '~': Add(Token.Tilde); break;
+					case '#': pos += 1; while (text[pos - 1] != '\n') pos += 1; break;
 
 					case '-': Add(Match('=') ? Token.MinusEqual  : Token.Minus); break;
 					case '+': Add(Match('=') ? Token.PlusEqual   : Token.Plus); break;
-					case '/': Add(Match('=') ? Token.SlashEqual  : Token.Slash); break;
 					case '*': Add(Match('=') ? Token.StarEqual   : Token.Star); break;
 					case '^': Add(Match('=') ? Token.CaretEqual  : Token.Caret); break;
 					case '%': Add(Match('=') ? Token.ModEqual    : Token.Mod); break;
@@ -142,14 +151,22 @@
 					case '!': Add(Match('=') ? Token.BangEqual   : Token.Bang); break;
 					case '=': Add(Match('=') ? Token.EqualEqual  : Token.Equal); break;
 
-					case '<': Add(Match('=') ? Token.LAngleEqual : Match('<') ? Token.LAngleAngle : Token.LAngle); break;
-					case '>': Add(Match('=') ? Token.RAngleEqual : Match('>') ? Token.RAngleAngle : Token.RAngle); break;
-					case '&': Add(Match('=') ? Token.AndEqual    : Match('&') ? Token.AndAnd :      Token.And); break;
-					case '|': Add(Match('=') ? Token.OrEqual     : Match('|') ? Token.OrOr :        Token.Or); break;
+					case '&': Add(Match('=') ? Token.AndEqual    : Match('&') ? Token.AndAnd : Token.And); break;
+					case '|': Add(Match('=') ? Token.OrEqual     : Match('|') ? Token.OrOr :   Token.Or); break;
+						
+					case '<': Add(Match('=') ? Token.LAngleEqual : Match('<') ? Match('=') ? Token.LAngleAngleEqual : Token.LAngleAngle : Token.LAngle); break;
+					case '>': Add(Match('=') ? Token.RAngleEqual : Match('>') ? Match('=') ? Token.RAngleAngleEqual : Token.RAngleAngle : Token.RAngle); break;
 
 					case ' ': case '\r': case '\t': case '\n': break;
 
 					case '"': case '\'': String(c); break;
+						
+					case '/':
+						if      (Match('/')) { pos += 1; while (text[pos - 1] != '\n') pos += 1; } 
+						else if (Match('*')) { pos += 2; while (text[pos - 2] == '*' && text[pos - 1] == '/') pos += 1; }
+						else Add(Match('=') ? Token.SlashEqual  : Token.Slash); 
+						break;
+						
 					default:
 						if (IsDigit(c)) Number();
 						else if (IsAlpha(c)) Id();

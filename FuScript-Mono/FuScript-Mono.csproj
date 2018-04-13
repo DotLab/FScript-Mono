@@ -46,14 +46,17 @@
     <Compile Include="FuScript\Third\Opcode.cs" />
     <Compile Include="FuScript\Third\Value.cs" />
     <Compile Include="FuScript\Third\VirtualMachine.cs" />
-    <Compile Include="FuScript\Lexer.cs" />
+    <Compile Include="FuScript\Forth\Compiler.cs" />
+    <Compile Include="FuScript\Forth\Lexer.cs" />
+    <Compile Include="FuScript\Forth\Opcode.cs" />
+    <Compile Include="FuScript\Forth\Token.cs" />
     <Compile Include="FuScript\Token.cs" />
-    <Compile Include="FuScript\Compiler.cs" />
-    <Compile Include="FuScript\Opcode.cs" />
+    <Compile Include="FuScript\Lexer.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
     <Folder Include="FuScript\" />
+    <Folder Include="FuScript\Forth\" />
   </ItemGroup>
   <ProjectExtensions>
     <MonoDevelop>
