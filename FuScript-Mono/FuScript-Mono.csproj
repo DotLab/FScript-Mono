@@ -52,6 +52,7 @@
     <Compile Include="FuScript\Forth\Token.cs" />
     <Compile Include="FuScript\Token.cs" />
     <Compile Include="FuScript\Lexer.cs" />
+    <Compile Include="FuScript\Compiler.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>

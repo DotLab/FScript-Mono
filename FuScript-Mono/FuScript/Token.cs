@@ -111,5 +111,22 @@
 					throw new UnrecognizedTokenException(t);
 			}
 		}
+
+		static readonly System.Text.StringBuilder sb = new System.Text.StringBuilder();
+		public static string Recant(byte[] ts) {
+			if (ts == null || ts.Length < 1) return "[ ]";
+			if (ts.Length == 1) return "[ " + Recant(ts[0]) + " ]";
+
+			sb.Clear();
+			sb.Append("[ ");
+			int length = ts.Length;
+			for (int i = 0; i < length; ++i) {
+				sb.Append(Recant(ts[i]));
+				if (i + 1 < length) sb.Append(", ");
+				else sb.Append(" ");
+			}
+			sb.Append("]");
+			return sb.ToString();
+		}
 	}
 }
