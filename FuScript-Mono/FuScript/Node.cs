@@ -3,6 +3,7 @@
 		public const ushort Null = 1, True = 2, False = 3, Var = 4, Int = 5, Float = 6, String = 7;
 
 		public const ushort Member = 10, Call = 11, Subscript = 12;
+		public const ushort Object = 13, Array = 14, Function = 15;
 
 		public const ushort Not = 40, And = 41, Or = 42, Conditional = 43, Assign = 44;
 
@@ -15,5 +16,9 @@
 		public const ushort LessThan = 70, GreaterThan = 71, LessEqual = 72, GreaterEqual = 73, Equal = 74, NotEqual = 75;
 
 		public const ushort PreInc = 80, PreDec = 81, PostInc = 82, PostDec = 83;
+
+		// stmt
+		public const ushort Expression = 100;
+		public const ushort Block = 200, VarDecl = 201, FunctionDecl = 202;
 	}
 }

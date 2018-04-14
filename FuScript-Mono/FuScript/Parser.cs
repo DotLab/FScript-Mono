@@ -1,4 +1,6 @@
-﻿namespace FuScript {
+﻿using ArgList = System.Collections.Generic.List<ushort>;
+
+namespace FuScript {
 	public class UnexpectedTokenException : System.Exception {
 		public UnexpectedTokenException(ushort t, params ushort[] es) : base("Unexpected token " + Token.Recant(t) + ", expecting one of " + Token.Recant(es)) { }
 	}
@@ -8,7 +10,7 @@
 
 		public static readonly ushort[] nodes = new ushort[1024];
 		public static readonly ushort[] marks = new ushort[1024];
-		public static ushort nodeCount, mark;
+		public static ushort nodeCount, mark, lastMark;
 
 		static void Log(string str) {
 			System.Console.Write(str);
@@ -27,12 +29,18 @@
 		}
 
 		static bool Match(ushort t) {
-			if (Current() == t) { Log(string.Format("{0} {1}\n", mark, Token.Recant(Current()))); pos += 1; return true; }
+			if (Current() == t) {
+				if (lastMark != mark) { lastMark = mark; Log(string.Format("\n{0}: ", mark)); }
+				Log(Token.Recant(Current()) + " "); 
+				pos += 1; return true; }
 			return false;
 		}
 
 		static void Eat(ushort t) {
-			if (Current() == t) { Log(string.Format("{0} {1}\n", mark, Token.Recant(Current()))); pos += 1; return; }
+			if (Current() == t) {
+				if (lastMark != mark) { lastMark = mark; Log(string.Format("\n{0}: ", mark)); }
+				Log(Token.Recant(Current()) + " "); 
+				pos += 1; return; }
 			throw new UnexpectedTokenException(Current(), t);
 		}
 
@@ -79,18 +87,148 @@
 		}
 
 		public static void Reset() {
-			pos = 0; nodeCount = 0; mark = 0;
+			pos = 0; nodeCount = 0; mark = 0; lastMark = 0;
 		}
 
 		public static void Parse() {
 			length = Lexer.tokenCount;
 
-			Expression();
+			while (pos < length) Statement();
 		}
 
+		/**
+		 * statement -> block
+		 *            | varDecl
+		 *            | funcDecl
+		 *            | ifStmt
+		 *            | whileStmt
+		 *            | forStmt
+		 *            | returnStmt
+		 *            | printStmt
+		 *            | exprStmt
+		 */
+		static ushort Statement() {
+			mark += 1;
+
+			if (Peek(Token.LCurly)) return Block();
+			if (Peek(Token.KVar)) return VarDecl();
+			if (Peek(Token.KFunction)) return FuncDecl();
+			//if (Peek(Token.KIf)) return IfStmt();
+			//if (Peek(Token.KWhile)) return WhileStmt();
+			//if (Peek(Token.KReturn)) return ReturnStmt();
+			return ExprStmt();
+		}
+
+		/**
+		 * block -> "{" statement* "}"
+		 */
+		static ushort Block() {
+			var argList = new ArgList();
+			Eat(Token.LCurly);
+			while (!Match(Token.RCurly)) argList.Add(Statement());
+			return Emit(Node.Block, argList.ToArray());
+		}
+
+		/**
+		 * varDecl -> "var" ID ( "=" expression )? ( "," ID ( "=" expression )? )* ";"
+		 */
+		static ushort VarDecl() {
+			Eat(Token.KVar);
+			var argList = new ArgList();
+			do {
+				Eat(Token.Id);
+				argList.Add(EatLiteral());
+				if (Match(Token.Equal)) argList.Add(Expression());
+				else                    argList.Add(Emit(Node.Null));
+			} while (Match(Token.Comma));
+			Eat(Token.Semi);
+			return Emit(Node.VarDecl, argList.ToArray());
+		}
+
+		/**
+		 * funcDecl -> "function" ID "(" ( ID ( "," ID )* )? ")" block
+		 */
+		static ushort FuncDecl() {
+			Eat(Token.KFunction);
+			Eat(Token.Id);
+			ushort id = EatLiteral();
+			ushort func = FuncExpr();
+			return Emit(Node.VarDecl, new [] { id, func });
+		}
+
+		/**
+		 * exprStmt -> expression ";"
+		 */
+		static ushort ExprStmt() {
+			ushort stmt = Expression();
+			Eat(Token.Semi);
+			return Emit(Node.Expression, stmt);
+		}
+
+		/**
+		 * expression -> objExpr
+		 *             | arrExpr
+		 *             | funcExpr
+		 *             | assignment
+		 */
 		static ushort Expression() {
+			if (Match(Token.LCurly))    return ObjExpr();
+			if (Match(Token.LSquare))   return ArrExpr();
+			if (Match(Token.KFunction)) return FuncExpr();
 			return Assignment();
 		}
+
+		/**
+		 * objExpr -> "{" ( ID ":" expression ( "," ID ":" expression )* )? "}"
+		 */
+		static ushort ObjExpr() {
+			//Eat(Token.LCurly);
+			var argList = new ArgList();
+			if (!Match(Token.RCurly)) {
+				do {
+					Eat(Token.Id);
+					argList.Add(EatLiteral());
+					Eat(Token.Colon);
+					argList.Add(Expression());
+				} while (Match(Token.Comma));
+				Eat(Token.RCurly);
+			}
+			return Emit(Node.Object, argList.ToArray());
+		}
+
+		/**
+		 * funcExpr -> "function" "(" ( ID ( "," ID )* )? ")" block
+		 */
+		static ushort FuncExpr() {
+			//Eat(Token.KFunction);
+			var argList = new ArgList{ 0 };
+			Eat(Token.LParen);
+			if (!Peek(Token.RParen)) {
+				do {
+					Eat(Token.Id);
+					argList.Add(EatLiteral());
+				} while (Match(Token.Comma));
+			}
+			Eat(Token.RParen);
+
+			argList[0] = Block();
+			return Emit(Node.Function, argList.ToArray());
+		}
+
+		/**
+		 * arrExpr -> "[" ( expression ( "," expression )* )? "]"
+		 */
+		static ushort ArrExpr() {
+			//Eat(Token.LSquare);
+			var argList = new System.Collections.Generic.List<ushort>();
+			if (!Match(Token.RSquare)) {
+				do argList.Add(Expression()); while (Match(Token.Comma));
+				Eat(Token.RSquare);
+			}
+			return Emit(Node.Array, argList.ToArray());
+		}
+
+		#region Arithmatics
 
 		/**
 		 * assignment -> call () expression
@@ -119,7 +257,7 @@
 
 
 		/**
-		 * conditional -> logical_or "?" expression ":" expression
+		 * conditional -> logicalOr "?" expression ":" expression
 		 */
 		static ushort Conditional() {
 			ushort cond = LogicalOr();
@@ -132,7 +270,7 @@
 		}
 
 		/**
-		 * logical_or -> equality ( ( "||" ) equality )*
+		 * logicalOr -> logicalAnd ( ( "||" ) logicalAnd )*
 		 */
 		static ushort LogicalOr() {
 			ushort lor = LogicalAnd();
@@ -144,7 +282,7 @@
 		}
 
 		/**
-		 * logical_and -> equality ( ( "&&" ) equality )*
+		 * logicalAnd -> equality ( ( "&&" ) equality )*
 		 */
 		static ushort LogicalAnd() {
 			ushort land = Equality();
@@ -297,5 +435,7 @@
 			if (Match(Token.LParen)) { ushort primary = Expression(); Eat(Token.RParen); return primary; }
 			throw new UnexpectedTokenException(Current(), Token.KNull, Token.KTrue, Token.KFalse, Token.Id, Token.Int, Token.Float, Token.String, Token.LParen);
 		}
+
+		#endregion
 	}
 }
