@@ -4,7 +4,7 @@
 	}
 
 	public static class Lexer {
-		static readonly System.Collections.Generic.Dictionary<string, byte> keywords = new System.Collections.Generic.Dictionary<string, byte>();
+		static readonly System.Collections.Generic.Dictionary<string, ushort> keywords = new System.Collections.Generic.Dictionary<string, ushort>();
 
 		static Lexer() {
 			keywords.Add("true",     Token.KTrue);
@@ -53,18 +53,18 @@
 		public static readonly string[] strings = new string[256];
 		public static ushort intCount, floatCount, stringCount;
 
-		public static readonly byte[] tokens = new byte[1024];
+		public static readonly ushort[] tokens = new ushort[1024];
 		public static ushort tokenCount;
 
 		static void Log(string str) {
 			System.Console.Write(str);
 		}
 
-		static void Add(byte t) {
+		static void Add(ushort t) {
 			tokens[tokenCount++] = t;
 		}
 
-		static void Add(byte t, int i) {
+		static void Add(ushort t, int i) {
 			tokens[tokenCount++] = t;
 
 			if (!intDict.ContainsKey(i)) {
@@ -72,12 +72,10 @@
 				intDict[i] = intCount++;
 			}
 
-			ushort index = intDict[i];
-			tokens[tokenCount++] = (byte)index;
-			tokens[tokenCount++] = (byte)(index >> 8);
+			tokens[tokenCount++] = intDict[i];
 		}
 
-		static void Add(byte t, float f) {
+		static void Add(ushort t, float f) {
 			tokens[tokenCount++] = t;
 
 			if (!floatDict.ContainsKey(f)) {
@@ -85,12 +83,10 @@
 				floatDict[f] = floatCount++;
 			}
 
-			ushort index = floatDict[f];
-			tokens[tokenCount++] = (byte)index;
-			tokens[tokenCount++] = (byte)(index >> 8);
+			tokens[tokenCount++] = floatDict[f];			
 		}
 
-		static void Add(byte t, string s) {
+		static void Add(ushort t, string s) {
 			tokens[tokenCount++] = t;
 
 			if (!stringDict.ContainsKey(s)) {
@@ -98,9 +94,7 @@
 				stringDict[s] = stringCount++;
 			}
 
-			ushort index = stringDict[s];
-			tokens[tokenCount++] = (byte)index;
-			tokens[tokenCount++] = (byte)(index >> 8);
+			tokens[tokenCount++] = stringDict[s];
 		}
 
 		static bool Match(char c) {
@@ -168,7 +162,7 @@
 						break;
 						
 					default:
-						if (IsDigit(c)) Number();
+						if      (IsDigit(c)) Number();
 						else if (IsAlpha(c)) Id();
 						else throw new UnexpectedCharacterException(c);
 						break;
@@ -207,23 +201,22 @@
 			else Add(Token.Id, id);
 		}
 
-		static readonly System.Text.StringBuilder sb = new System.Text.StringBuilder();
 		public static string Recant() {
-			sb.Clear();
+			var sb = new System.Text.StringBuilder();
 
 			int i = 0;
 			while (i < tokenCount) {
 				switch (tokens[i++]) {
-					case Token.Id:          sb.Append(strings[tokens[i++] | tokens[i++] << 8]); break;
-					case Token.String:      sb.Append("'"); sb.Append(strings[tokens[i++] | tokens[i++] << 8]); sb.Append("'"); break;
-					case Token.Int:         sb.Append(ints[tokens[i++] | tokens[i++] << 8]); break;
-					case Token.Float:       sb.Append(floats[tokens[i++] | tokens[i++] << 8]); break;
+					case Token.Int:         sb.Append(ints[tokens[i++]]); break;
+					case Token.Float:       sb.Append(floats[tokens[i++]]); break;
+					case Token.Id:          sb.Append(strings[tokens[i++]]); break;
+					case Token.String:      sb.Append('"'); sb.Append(strings[tokens[i++]]); sb.Append('"'); break;
 
 					default:
 						sb.Append(Token.Recant(tokens[i - 1]));
 						break;
 				}
-				sb.Append(" ");
+				sb.Append(' ');
 			}
 			
 			return sb.ToString();
