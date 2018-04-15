@@ -136,8 +136,8 @@
 					case '~': Add(Token.Tilde); break;
 					case '#': pos += 1; while (text[pos - 1] != '\n') pos += 1; break;
 
-					case '-': Add(Match('=') ? Token.MinusEqual  : Token.Minus); break;
-					case '+': Add(Match('=') ? Token.PlusEqual   : Token.Plus); break;
+					case '+': Add(Match('=') ? Token.PlusEqual   : Match('+') ? Token.PlusPlus   : Token.Plus); break;
+					case '-': Add(Match('=') ? Token.MinusEqual  : Match('-') ? Token.MinusMinus : Token.Minus); break;
 					case '*': Add(Match('=') ? Token.StarEqual   : Token.Star); break;
 					case '^': Add(Match('=') ? Token.CaretEqual  : Token.Caret); break;
 					case '%': Add(Match('=') ? Token.ModEqual    : Token.Mod); break;

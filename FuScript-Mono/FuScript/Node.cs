@@ -5,7 +5,7 @@
 		public const ushort Member = 10, Call = 11, Subscript = 12;
 		public const ushort Object = 13, Array = 14, Function = 15;
 
-		public const ushort Not = 40, And = 41, Or = 42, Conditional = 43, Assign = 44;
+		public const ushort Not = 40, And = 41, Or = 42, Conditional = 43, Assign = 44, Comma = 45;
 
 		public const ushort BitNot = 20, BitOr = 21, BitAnd = 22, BitXor = 23, ShiftLeft = 24, ShiftRight = 25;
 		public const ushort AssignBitNot = 30, AssignBitOr = 31, AssignBitAnd = 32, AssignBitXor = 33, AssignShiftLeft = 34, AssignShiftRight = 35;
@@ -18,7 +18,7 @@
 		public const ushort PreInc = 80, PreDec = 81, PostInc = 82, PostDec = 83;
 
 		// stmt
-		public const ushort Expression = 100;
-		public const ushort Block = 200, VarDecl = 201, FunctionDecl = 202;
+		public const ushort Block = 200, VarDecl = 201, IfStmt = 202, WhileStmt = 203, ExprStmt = 100;
+		public const ushort NoOp = 300, Break = 301, Continue = 302, Return = 303;
 	}
 }

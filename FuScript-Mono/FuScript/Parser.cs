@@ -2,7 +2,7 @@
 
 namespace FuScript {
 	public class UnexpectedTokenException : System.Exception {
-		public UnexpectedTokenException(ushort t, params ushort[] es) : base("Unexpected token " + Token.Recant(t) + ", expecting one of " + Token.Recant(es)) { }
+		public UnexpectedTokenException(ushort t, params ushort[] es) : base("Unexpected token '" + Token.Recant(t) + "', expecting one of " + Token.Recant(es)) { }
 	}
 
 	public static class Parser {
@@ -97,25 +97,35 @@ namespace FuScript {
 		}
 
 		/**
-		 * statement -> block
-		 *            | varDecl
-		 *            | funcDecl
+		 * statement -> block | varDecl | funcDecl
 		 *            | ifStmt
-		 *            | whileStmt
-		 *            | forStmt
-		 *            | returnStmt
-		 *            | printStmt
+		 *            | whileStmt | forStmt | doStmt
+		 *            | "break" ";" | "continue" ";" | "return" expression? ";"
 		 *            | exprStmt
 		 */
 		static ushort Statement() {
 			mark += 1;
 
-			if (Peek(Token.LCurly)) return Block();
-			if (Peek(Token.KVar)) return VarDecl();
+			if (Peek(Token.LCurly))    return Block();
+			if (Peek(Token.KVar))      return VarDecl();
 			if (Peek(Token.KFunction)) return FuncDecl();
-			//if (Peek(Token.KIf)) return IfStmt();
-			//if (Peek(Token.KWhile)) return WhileStmt();
-			//if (Peek(Token.KReturn)) return ReturnStmt();
+
+			if (Peek(Token.KIf)) return IfStmt();
+
+			if (Peek(Token.KWhile)) return WhileStmt();
+			if (Peek(Token.KDo))    return DoStmt();
+			if (Peek(Token.KFor))   return ForStmt();
+
+			if (Match(Token.KBreak))    { Eat(Token.Semi); return Emit(Node.Break); }
+			if (Match(Token.KContinue)) { Eat(Token.Semi); return Emit(Node.Continue); }
+
+			if (Match(Token.KReturn)) {
+				if (Match(Token.Semi)) return Emit(Node.Return, Emit(Node.Null));
+				ushort expr = Expression();
+				Eat(Token.Semi);
+				return Emit(Node.Return, expr);
+			}
+
 			return ExprStmt();
 		}
 
@@ -157,25 +167,98 @@ namespace FuScript {
 		}
 
 		/**
+		 * ifStmt -> "if" "(" expression ")" statement ("else" statement)?
+		 */
+		static ushort IfStmt() {
+			Eat(Token.KIf);
+			Eat(Token.LParen);
+			ushort cond = Expression();
+			Eat(Token.RParen);
+			ushort then = Statement();
+			if (Match(Token.KElse)) return Emit(Node.IfStmt, cond, then, Statement());
+			return Emit(Node.IfStmt, cond, then, Emit(Node.NoOp));
+		}
+
+		/**
+		 * whileStmt -> "while" "(" expression ")" statement
+		 */
+		static ushort WhileStmt() {
+			Eat(Token.KWhile);
+			Eat(Token.LParen);
+			ushort cond = Expression();
+			Eat(Token.RParen);
+			return Emit(Node.WhileStmt, cond, Statement());
+		}
+
+		/**
+		 * doStmt -> "do" statement "while" "(" expression ")" ";"
+		 */
+		static ushort DoStmt() {
+			Eat(Token.KDo);
+			ushort stmt = Statement();
+			Eat(Token.KWhile);
+			Eat(Token.LParen);
+			ushort cond = Expression();
+			Eat(Token.RParen);
+			Eat(Token.Semi);
+			return Emit(Node.Block, new [] { stmt, Emit(Node.WhileStmt, cond, stmt) });
+		}
+
+		/**
+		 * forStmt -> "for" "(" ( ";" | varDecl | ExprStmt ) expression? ";" expression? ")" statement 
+		 */
+		static ushort ForStmt() {
+			Eat(Token.KFor);
+			Eat(Token.LParen);
+			ushort init = 0;
+			if     (Match(Token.Semi)) init = Emit(Node.NoOp);
+			else if (Peek(Token.KVar)) init = VarDecl();
+			else init = ExprStmt();
+
+			ushort cond;
+			if (Peek(Token.Semi)) cond = Emit(Node.True);
+			else cond = Expression();
+			Eat(Token.Semi);
+
+			ushort inc;
+			if (Peek(Token.RParen)) inc = Emit(Node.NoOp);
+			else inc = Expression();
+			Eat(Token.RParen);
+
+			ushort stmt = Statement();
+
+			var stmtList = new ArgList();
+			if (nodes[stmt] == Node.Block) {
+				for (int i = 0; i < nodes[stmt + 1]; ++i) stmtList.Add(nodes[stmt + 1 + i]);
+			} else {
+				stmtList.Add(stmt);
+			}
+			stmtList.Add(inc);
+			stmt = Emit(Node.Block, stmtList.ToArray());
+
+			return Emit(Node.Block, new [] { init, Emit(Node.WhileStmt, cond, stmt) });
+		}
+
+		/**
 		 * exprStmt -> expression ";"
 		 */
 		static ushort ExprStmt() {
 			ushort stmt = Expression();
 			Eat(Token.Semi);
-			return Emit(Node.Expression, stmt);
+			return Emit(Node.ExprStmt, stmt);
 		}
 
 		/**
 		 * expression -> objExpr
 		 *             | arrExpr
 		 *             | funcExpr
-		 *             | assignment
+		 *             | arithmetic
 		 */
 		static ushort Expression() {
 			if (Match(Token.LCurly))    return ObjExpr();
 			if (Match(Token.LSquare))   return ArrExpr();
 			if (Match(Token.KFunction)) return FuncExpr();
-			return Assignment();
+			return Arithmetic();
 		}
 
 		/**
@@ -220,7 +303,7 @@ namespace FuScript {
 		 */
 		static ushort ArrExpr() {
 			//Eat(Token.LSquare);
-			var argList = new System.Collections.Generic.List<ushort>();
+			var argList = new ArgList();
 			if (!Match(Token.RSquare)) {
 				do argList.Add(Expression()); while (Match(Token.Comma));
 				Eat(Token.RSquare);
@@ -228,7 +311,24 @@ namespace FuScript {
 			return Emit(Node.Array, argList.ToArray());
 		}
 
-		#region Arithmatics
+		#region Arithmetic
+
+		/**
+		 * arithmetic -> comma
+		 */
+		static ushort Arithmetic() {
+			return Comma();
+		}
+
+		/**
+		 * comma -> assignment ( "," assignment ) *
+		 */
+		static ushort Comma() {
+			var argList = new ArgList();
+			do argList.Add(Assignment()); while (Match(Token.Comma));
+			if (argList.Count == 1) return argList[0];
+			return Emit(Node.Comma, argList.ToArray());
+		}
 
 		/**
 		 * assignment -> call () expression
@@ -437,5 +537,9 @@ namespace FuScript {
 		}
 
 		#endregion
+
+		public static string Recant() {
+			return "\n";
+		}
 	}
 }
