@@ -339,18 +339,18 @@ namespace FuScript {
 			if (Find(assign) == Node.Var || Find(assign) == Node.Member || Find(assign) == Node.Subscript) {
 				if (Match(Token.Equal)) return Emit(Node.Assign, assign, Expression());
 				
-				if (Match(Token.PlusEqual))  return Emit(Node.AssignAdd, assign, Expression());
-				if (Match(Token.MinusEqual)) return Emit(Node.AssignSub, assign, Expression());
-				
 				if (Match(Token.ModEqual))   return Emit(Node.AssignMod, assign, Expression());
 				if (Match(Token.StarEqual))  return Emit(Node.AssignMul, assign, Expression());
 				if (Match(Token.SlashEqual)) return Emit(Node.AssignDiv, assign, Expression());
+
+				if (Match(Token.PlusEqual))  return Emit(Node.AssignAdd, assign, Expression());
+				if (Match(Token.MinusEqual)) return Emit(Node.AssignSub, assign, Expression());
 				
 				if (Match(Token.OrEqual))    return Emit(Node.AssignBitOr, assign, Expression());
 				if (Match(Token.AndEqual))   return Emit(Node.AssignBitAnd, assign, Expression());
 				if (Match(Token.CaretEqual)) return Emit(Node.AssignBitXor, assign, Expression());
-				if (Match(Token.LAngleAngleEqual)) return Emit(Node.AssignShiftLeft, assign, Expression());
-				if (Match(Token.RAngleAngleEqual)) return Emit(Node.AssignShiftRight, assign, Expression());
+				if (Match(Token.LAngleAngleEqual)) return Emit(Node.AssignShiftL, assign, Expression());
+				if (Match(Token.RAngleAngleEqual)) return Emit(Node.AssignShiftR, assign, Expression());
 			}
 			return assign;
 		}
@@ -430,8 +430,8 @@ namespace FuScript {
 				if      (Match(Token.Or))    bit = Emit(Node.BitOr,  bit, Additive());
 				else if (Match(Token.And))   bit = Emit(Node.BitAnd, bit, Additive());
 				else if (Match(Token.Caret)) bit = Emit(Node.BitXor, bit, Additive());
-				else if (Match(Token.LAngleAngle)) bit = Emit(Node.ShiftLeft,  bit, Additive());
-				else if (Match(Token.RAngleAngle)) bit = Emit(Node.ShiftRight, bit, Additive());
+				else if (Match(Token.LAngleAngle)) bit = Emit(Node.ShiftL,  bit, Additive());
+				else if (Match(Token.RAngleAngle)) bit = Emit(Node.ShiftR, bit, Additive());
 				else break;
 			}
 			return bit;
