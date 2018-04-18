@@ -4,7 +4,6 @@
 			System.Console.WriteLine(str);
 		}
 
-		static readonly ushort[] 
 		public static void Reset() {
 			
 		}
