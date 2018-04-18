@@ -93,7 +93,7 @@ namespace FuScript {
 		public static ushort Parse() {
 			length = Lexer.tokenCount;
 
-			return Program();
+			return ExprStmt();
 		}
 
 		/**

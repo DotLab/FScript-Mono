@@ -55,6 +55,7 @@
     <Compile Include="FuScript\Compiler.cs" />
     <Compile Include="FuScript\Parser.cs" />
     <Compile Include="FuScript\Node.cs" />
+    <Compile Include="FuScript\Opcode.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
   <ItemGroup>
