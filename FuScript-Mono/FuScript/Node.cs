@@ -43,7 +43,7 @@
 		public const ushort ExprStmt = 150, WhileStmt = 151, IfStmt = 152, VarDecl = 153;
 
 		// block [ nodes ]
-		public const ushort Block = 160;
+		public const ushort Block = 160, Program = 161;
 
 		// break | continue | return node | noOp
 		public const ushort Break = 170, Continue = 171, Return = 172, NoOp = 173;

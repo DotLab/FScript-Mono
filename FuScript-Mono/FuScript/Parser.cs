@@ -90,10 +90,19 @@ namespace FuScript {
 			pos = 0; nodeCount = 0; mark = 0; lastMark = 0;
 		}
 
-		public static void Parse() {
+		public static ushort Parse() {
 			length = Lexer.tokenCount;
 
-			while (pos < length) Statement();
+			return Program();
+		}
+
+		/**
+		 * program -> ( statement )* EOF
+		 */
+		public static ushort Program() {
+			var args = new ArgList();
+			while (!Match(Token.Eof)) args.Add(Statement());
+			return Emit(Node.Program, args.ToArray());
 		}
 
 		/**

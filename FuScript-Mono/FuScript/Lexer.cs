@@ -169,7 +169,7 @@
 				}
 			}
 
-			// if (tokens[tcount - 1] != Token.Eof) Add(Token.Eof);
+			if (tokens[tokenCount - 1] != Token.Eof) tokens[tokenCount] = Token.Eof;
 		}
 
 		static void Number() {
