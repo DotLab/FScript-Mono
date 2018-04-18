@@ -1,10 +1,9 @@
-﻿namespace FuScript {
+﻿namespace FuScript.Fifth {
 	public static class Compiler {
 		static void Log(string str) {
 			System.Console.WriteLine(str);
 		}
 
-		static readonly ushort[] 
 		public static void Reset() {
 			
 		}

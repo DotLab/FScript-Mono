@@ -1,4 +1,4 @@
-﻿namespace FuScript {
+﻿namespace FuScript.Fifth {
 	public static class Node {
 		// null | true | false
 		public const ushort Null = 1, True = 2, False = 3;

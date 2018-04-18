@@ -1,6 +1,6 @@
 ﻿using ArgList = System.Collections.Generic.List<ushort>;
 
-namespace FuScript {
+namespace FuScript.Fifth {
 	public class UnexpectedTokenException : System.Exception {
 		public UnexpectedTokenException(ushort t, params ushort[] es) : base("Unexpected token '" + Token.Recant(t) + "', expecting one of " + Token.Recant(es)) { }
 	}
